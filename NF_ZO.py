@@ -47,7 +47,15 @@ solver = get_solver()
 # setup flowsheet
 m = ConcreteModel()
 m.fs = FlowsheetBlock(dynamic=False)
-m.fs.properties = props.MCASParameterBlock()
+
+# solute list
+solute_list = ["Ca_2+", "Mg_2+", "Cl_-", "Na_+"]
+mw_data = {"Ca_2+": 40e-3, "Mg_2+": 24e-3, "Cl_-": 35e-3, "Na_+": 23e-3}
+charge = {"Ca_2+": 2, "Mg_2+": 2, "Cl_-": -1, "Na_+": 1}
+
+m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
+                                           mw_data=mw_data,
+                                           charge=charge)
 
 # create units
 m.fs.feed = Feed(property_package=m.fs.properties)
@@ -68,18 +76,18 @@ TransformationFactory("network.expand_arcs").apply_to(m)
 m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
 m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 # properties (cannot be fixed for initialization routines, must calculate the state variables)
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Ca"] = 0.000891
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Mg"] = 0.002878
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Cl"] = 0.04366
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Na"] = 0.02465
+m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Ca_2+"] = 0.000891
+m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Mg_2+"] = 0.002878
+m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Cl_-"] = 0.04366
+m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Na_+"] = 0.02465
 
 m.fs.feed.properties.calculate_state(
     var_args={
         ("flow_mass_phase_comp", ("Liq", "H2O")): 436.346,  # feed mass flow rate [kg/s]
-        ("mass_frac_phase_comp", ("Liq", "Ca")): 0.000891,
-        ("mass_frac_phase_comp", ("Liq", "Mg")): 0.002878,
-        ("mass_frac_phase_comp", ("Liq", "Cl")): 0.04366,
-        ("mass_frac_phase_comp", ("Liq", "Na")): 0.02465,
+        ("mass_frac_phase_comp", ("Liq", "Ca_2+")): 0.000891,
+        ("mass_frac_phase_comp", ("Liq", "Mg_2+")): 0.002878,
+        ("mass_frac_phase_comp", ("Liq", "Cl_-")): 0.04366,
+        ("mass_frac_phase_comp", ("Liq", "Na_+")): 0.02465,
     },  # feed mass fractions [-]
     hold_state=True,  # fixes the calculated component mass flow rates
 )
@@ -89,13 +97,11 @@ m.fs.P1.outlet.pressure[0].fix(10e5)
 # fully specify system
 m.fs.unit.properties_permeate[0].pressure.fix(101325)
 m.fs.unit.recovery_vol_phase.fix(0.6)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Na"].fix(0.01)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Ca"].fix(0.79)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Mg"].fix(0.94)
-m.fs.unit.rejection_phase_comp[
-    0, "Liq", "Cl"
-] = 0.15  # guess, but electroneutrality enforced below
-charge_comp = {"Na": 1, "Ca": 2, "Mg": 2, "Cl": -1, 
+m.fs.unit.rejection_phase_comp[0, "Liq", "Na_+"].fix(0.01)
+m.fs.unit.rejection_phase_comp[0, "Liq", "Ca_2+"].fix(0.79)
+m.fs.unit.rejection_phase_comp[0, "Liq", "Mg_2+"].fix(0.94)
+m.fs.unit.rejection_phase_comp[0, "Liq", "Cl_-"] = 0.15  # guess, but electroneutrality enforced below
+charge_comp = {"Na_+": 1, "Ca_2+": 2, "Mg_2+": 2, "Cl_-": -1, 
                }
 m.fs.unit.eq_electroneutrality = Constraint(
     expr=0
@@ -112,16 +118,16 @@ m.fs.properties.set_default_scaling(
     "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
 )
 m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e-1, index=("Liq", "Na")
+    "flow_mass_phase_comp", 1e-1, index=("Liq", "Na_+")
 )
 m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e1, index=("Liq", "Ca")
+    "flow_mass_phase_comp", 1e1, index=("Liq", "Ca_2+")
 )
 m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1, index=("Liq", "Mg")
+    "flow_mass_phase_comp", 1, index=("Liq", "Mg_2+")
 )
 m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e-1, index=("Liq", "Cl")
+    "flow_mass_phase_comp", 1e-1, index=("Liq", "Cl_-")
 )
 iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
 
@@ -140,3 +146,4 @@ m.fs.disposal.initialize()
 
 # solve model
 results = solver.solve(m, tee=True)
+m.fs.unit.report()
