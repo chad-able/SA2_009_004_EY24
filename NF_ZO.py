@@ -70,24 +70,16 @@ m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 # properties (cannot be fixed for initialization routines, must calculate the state variables)
 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Ca"] = 0.000891
 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Mg"] = 0.002878
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "SO4"] = 0.006745
 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Cl"] = 0.04366
 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Na"] = 0.02465
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "K"] = 0.00088799
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "CO3"] = 3.99997E-07
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "HCO3"] = 0.0003153
 
 m.fs.feed.properties.calculate_state(
     var_args={
         ("flow_mass_phase_comp", ("Liq", "H2O")): 436.346,  # feed mass flow rate [kg/s]
         ("mass_frac_phase_comp", ("Liq", "Ca")): 0.000891,
         ("mass_frac_phase_comp", ("Liq", "Mg")): 0.002878,
-        ("mass_frac_phase_comp", ("Liq", "SO4")): 0.006745,
         ("mass_frac_phase_comp", ("Liq", "Cl")): 0.04366,
         ("mass_frac_phase_comp", ("Liq", "Na")): 0.02465,
-        ("mass_frac_phase_comp", ("Liq", "K")): 0.00088799,
-        ("mass_frac_phase_comp", ("Liq", "CO3")): 3.99997E-07,
-        ("mass_frac_phase_comp", ("Liq", "HCO3")): 0.0003153,
     },  # feed mass fractions [-]
     hold_state=True,  # fixes the calculated component mass flow rates
 )
@@ -100,15 +92,11 @@ m.fs.unit.recovery_vol_phase.fix(0.6)
 m.fs.unit.rejection_phase_comp[0, "Liq", "Na"].fix(0.01)
 m.fs.unit.rejection_phase_comp[0, "Liq", "Ca"].fix(0.79)
 m.fs.unit.rejection_phase_comp[0, "Liq", "Mg"].fix(0.94)
-m.fs.unit.rejection_phase_comp[0, "Liq", "SO4"].fix(0.87)
-m.fs.unit.rejection_phase_comp[0, "Liq", "K"].fix(0.01)
-m.fs.unit.rejection_phase_comp[0, "Liq", "CO3"].fix(0.87) #similar to sulfate
-m.fs.unit.rejection_phase_comp[0, "Liq", "HCO3"].fix(0.75) #https://doi.org/10.1080/19443994.2015.1135825
 m.fs.unit.rejection_phase_comp[
     0, "Liq", "Cl"
 ] = 0.15  # guess, but electroneutrality enforced below
-charge_comp = {"Na": 1, "Ca": 2, "Mg": 2, "SO4": -2, "Cl": -1, "K": 1,
-               "CO3": -2, "HCO3": -1,}
+charge_comp = {"Na": 1, "Ca": 2, "Mg": 2, "Cl": -1, 
+               }
 m.fs.unit.eq_electroneutrality = Constraint(
     expr=0
     == sum(
@@ -133,21 +121,8 @@ m.fs.properties.set_default_scaling(
     "flow_mass_phase_comp", 1, index=("Liq", "Mg")
 )
 m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1, index=("Liq", "SO4")
-)
-m.fs.properties.set_default_scaling(
     "flow_mass_phase_comp", 1e-1, index=("Liq", "Cl")
 )
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e1, index=("Liq", "K")
-)
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e4, index=("Liq", "CO3")
-)
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e1, index=("Liq", "HCO3")
-)
-
 iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
 
 iscale.calculate_scaling_factors(m)
