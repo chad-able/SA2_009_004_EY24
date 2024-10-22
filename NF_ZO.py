@@ -32,10 +32,8 @@ import idaes.core.util.scaling as iscale
 from pyomo.util.check_units import assert_units_consistent
 from watertap.unit_models.nanofiltration_ZO import NanofiltrationZO
 from watertap.unit_models.pressure_changer import Pump
-from watertap.costing import WaterTAPCosting
-from watertap.core.zero_order_costing import ZeroOrderCosting
 from watertap.core.wt_database import Database
-import watertap.examples.flowsheets.full_treatment_train.model_components.seawater_ion_prop_pack_dhe as props
+import watertap.property_models.multicomp_aq_sol_prop_pack as props
 from idaes.core.util.scaling import (
     calculate_scaling_factors,
     constraint_scaling_transform,
@@ -49,8 +47,7 @@ solver = get_solver()
 # setup flowsheet
 m = ConcreteModel()
 m.fs = FlowsheetBlock(dynamic=False)
-m.fs.properties = props.PropParameterBlock()
-m.fs.costing = WaterTAPCosting()
+m.fs.properties = props.MCASParameterBlock()
 
 # create units
 m.fs.feed = Feed(property_package=m.fs.properties)
