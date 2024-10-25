@@ -1,0 +1,75 @@
+{
+  "Ba": {
+    "charge": 2,
+    "mass_concentration": 0.002344,
+    "mw": 0.137,
+    "rejection_phase_comp": 0.79
+  },
+  "Br": {
+    "charge": -1,
+    "mass_concentration": 0.224,
+    "mw": 0.079,
+    "rejection_phase_comp": 0.9
+  },
+  "CO3": {
+    "charge": -2,
+    "mass_concentration": 0.04855,
+    "mw": 0.06,
+    "rejection_phase_comp": 0.87
+  },
+  "Ca": {
+    "charge": 2,
+    "mass_concentration": 3.1275,
+    "mw": 0.04,
+    "rejection_phase_comp": 0.79
+  },
+  "Cl": {
+    "charge": -1,
+    "mass_concentration": 59.2,
+    "mw": 0.035,
+    "rejection_phase_comp": 0.001 
+  },
+  "HCO3": {
+    "charge": -1,
+    "mass_concentration": 0.231,
+    "mw": 0.061,
+    "rejection_phase_comp": 0.75
+  },
+  "K": {
+    "charge": 1,
+    "mass_concentration": 0.402,
+    "mw": 0.039,
+    "rejection_phase_comp": 0.01
+  },
+  "Li": {
+    "charge": 2,
+    "mass_concentration": 0.01075,
+    "mw": 0.00694,
+    "rejection_phase_comp": 0.01
+  },
+  "Mg": {
+    "charge": 2,
+    "mass_concentration": 0.889,
+    "mw": 0.024,
+    "rejection_phase_comp": 0.94
+  },
+  "Mn": {
+    "charge": 2,
+    "mass_concentration": 0.000885,
+    "mw": 0.054,
+    "rejection_phase_comp": 0.94
+  },
+  "Na": {
+    "charge": 1,
+    "mass_concentration": 31.275,
+    "mw": 0.023,
+    "rejection_phase_comp": 0.01
+  },
+  "Sr": {
+    "charge": 2,
+    "mass_concentration": 0.1237,
+    "mw": 0.087,
+    "rejection_phase_comp": 0.79
+  }
+}
+ 
