@@ -21,6 +21,8 @@ from pyomo.environ import (
     Constraint,
     Objective,
 )
+import json
+import math
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
 from idaes.core.solvers import get_solver
@@ -48,10 +50,14 @@ solver = get_solver()
 m = ConcreteModel()
 m.fs = FlowsheetBlock(dynamic=False)
 
+# Read data from 'solute_parameters.json'
+with open("solute_parameters.json") as f:
+    solute_data = json.load(f)
+
 # solute list
-solute_list = ["Ca_2+", "Mg_2+", "Cl_-", "Na_+"]
-mw_data = {"Ca_2+": 40e-3, "Mg_2+": 24e-3, "Cl_-": 35e-3, "Na_+": 23e-3}
-charge = {"Ca_2+": 2, "Mg_2+": 2, "Cl_-": -1, "Na_+": 1}
+solute_list = ["Ca", "Mg", "Na", "Cl"]
+mw_data = {key: solute_data[key]['mw'] for key in solute_list}
+charge = {key: solute_data[key]['charge'] for key in solute_list}
 
 m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
                                            mw_data=mw_data,
@@ -75,20 +81,16 @@ TransformationFactory("network.expand_arcs").apply_to(m)
 # specify flowsheet
 m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
 m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
+
 # properties (cannot be fixed for initialization routines, must calculate the state variables)
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Ca_2+"] = 0.000891
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Mg_2+"] = 0.002878
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Cl_-"] = 0.04366
-m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "Na_+"] = 0.02465
+for key in solute_list:
+    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
+
+var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
+var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 436.34
 
 m.fs.feed.properties.calculate_state(
-    var_args={
-        ("flow_mass_phase_comp", ("Liq", "H2O")): 436.346,  # feed mass flow rate [kg/s]
-        ("mass_frac_phase_comp", ("Liq", "Ca_2+")): 0.000891,
-        ("mass_frac_phase_comp", ("Liq", "Mg_2+")): 0.002878,
-        ("mass_frac_phase_comp", ("Liq", "Cl_-")): 0.04366,
-        ("mass_frac_phase_comp", ("Liq", "Na_+")): 0.02465,
-    },  # feed mass fractions [-]
+    var_args = var_args,  # feed mass fractions [-]
     hold_state=True,  # fixes the calculated component mass flow rates
 )
 m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
@@ -97,12 +99,11 @@ m.fs.P1.outlet.pressure[0].fix(10e5)
 # fully specify system
 m.fs.unit.properties_permeate[0].pressure.fix(101325)
 m.fs.unit.recovery_vol_phase.fix(0.6)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Na_+"].fix(0.01)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Ca_2+"].fix(0.79)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Mg_2+"].fix(0.94)
-m.fs.unit.rejection_phase_comp[0, "Liq", "Cl_-"] = 0.15  # guess, but electroneutrality enforced below
-charge_comp = {"Na_+": 1, "Ca_2+": 2, "Mg_2+": 2, "Cl_-": -1, 
-               }
+
+[m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp']) for key in solute_list[:-1]]
+m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
+charge_comp = {"Na": 1, "Ca": 2, "Mg": 2, "Cl": -1, }
+
 m.fs.unit.eq_electroneutrality = Constraint(
     expr=0
     == sum(
@@ -113,22 +114,23 @@ m.fs.unit.eq_electroneutrality = Constraint(
 )
 constraint_scaling_transform(m.fs.unit.eq_electroneutrality, 1)
 
+def inverse_order_of_magnitude(number):
+    if number == 0:
+        return "undefined"  # The order of magnitude for zero is undefined
+    magnitude = math.floor(math.log10(abs(number)))
+    return 10**(-magnitude)
+
 # scaling
 m.fs.properties.set_default_scaling(
     "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
 )
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e-1, index=("Liq", "Na_+")
-)
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e1, index=("Liq", "Ca_2+")
-)
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1, index=("Liq", "Mg_2+")
-)
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e-1, index=("Liq", "Cl_-")
-)
+
+for key in solute_list:
+    m.fs.properties.set_default_scaling(
+        "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
+     )
+
+
 iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
 
 iscale.calculate_scaling_factors(m)
