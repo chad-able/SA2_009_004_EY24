@@ -55,7 +55,7 @@ with open("solute_parameters.json") as f:
     solute_data = json.load(f)
 
 # solute list
-solute_list = ["Ca", "Mg", "Na", "Cl"]
+solute_list = list(solute_data.keys())
 mw_data = {key: solute_data[key]['mw'] for key in solute_list}
 charge = {key: solute_data[key]['charge'] for key in solute_list}
 
@@ -100,9 +100,12 @@ m.fs.P1.outlet.pressure[0].fix(10e5)
 m.fs.unit.properties_permeate[0].pressure.fix(101325)
 m.fs.unit.recovery_vol_phase.fix(0.6)
 
-[m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp']) for key in solute_list[:-1]]
+for key in solute_list:
+    if key != "Cl":
+        m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp'])
+
 m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
-charge_comp = {"Na": 1, "Ca": 2, "Mg": 2, "Cl": -1, }
+charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
 
 m.fs.unit.eq_electroneutrality = Constraint(
     expr=0
@@ -125,6 +128,7 @@ m.fs.properties.set_default_scaling(
     "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
 )
 
+# Set the scaling to be the inverse of the order of magnitude of the mass concentration
 for key in solute_list:
     m.fs.properties.set_default_scaling(
         "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
