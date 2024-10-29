@@ -1,15 +1,3 @@
-#################################################################################
-# WaterTAP Copyright (c) 2020-2023, The Regents of the University of California,
-# through Lawrence Berkeley National Laboratory, Oak Ridge National Laboratory,
-# National Renewable Energy Laboratory, and National Energy Technology
-# Laboratory (subject to receipt of any required approvals from the U.S. Dept.
-# of Energy). All rights reserved.
-#
-# Please see the files COPYRIGHT.md and LICENSE.md for full copyright and license
-# information, respectively. These files are also available online at the URL
-# "https://github.com/watertap-org/watertap/"
-#################################################################################
-
 # imports
 from pyomo.environ import (
     ConcreteModel,
@@ -43,113 +31,106 @@ from idaes.core.util.scaling import (
     unscaled_constraints_generator,
     badly_scaled_var_generator,
 )
-# get solver
-solver = get_solver()
 
-# setup flowsheet
-m = ConcreteModel()
-m.fs = FlowsheetBlock(dynamic=False)
+def nanofiltration(m):
+    # Read data from 'solute_parameters.json'
+    with open("solute_parameters.json") as f:
+        solute_data = json.load(f)
 
-# Read data from 'solute_parameters.json'
-with open("solute_parameters.json") as f:
-    solute_data = json.load(f)
+    # solute list
+    solute_list = list(solute_data.keys())
+    mw_data = {key: solute_data[key]['mw'] for key in solute_list}
+    charge = {key: solute_data[key]['charge'] for key in solute_list}
 
-# solute list
-solute_list = list(solute_data.keys())
-mw_data = {key: solute_data[key]['mw'] for key in solute_list}
-charge = {key: solute_data[key]['charge'] for key in solute_list}
+    m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
+                                               mw_data=mw_data,
+                                               charge=charge)
 
-m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
-                                           mw_data=mw_data,
-                                           charge=charge)
+    # create units
+    m.fs.feed = Feed(property_package=m.fs.properties)
+    m.fs.product = Product(property_package=m.fs.properties)
+    m.fs.disposal = Product(property_package=m.fs.properties)
+    m.fs.unit = NanofiltrationZO(property_package=m.fs.properties)
+    m.fs.P1 = Pump(property_package=m.fs.properties)
 
-# create units
-m.fs.feed = Feed(property_package=m.fs.properties)
-m.fs.product = Product(property_package=m.fs.properties)
-m.fs.disposal = Product(property_package=m.fs.properties)
-m.fs.unit = NanofiltrationZO(property_package=m.fs.properties)
-m.fs.P1 = Pump(property_package=m.fs.properties)
+    # connections
+    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
+    m.fs.s02 = Arc(source=m.fs.P1.outlet, destination=m.fs.unit.inlet)
+    m.fs.s03 = Arc(source=m.fs.unit.permeate, destination=m.fs.product.inlet)
+    m.fs.s04 = Arc(source=m.fs.unit.retentate, destination=m.fs.disposal.inlet)
 
-# connections
-m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
-m.fs.s02 = Arc(source=m.fs.P1.outlet, destination=m.fs.unit.inlet)
-m.fs.s03 = Arc(source=m.fs.unit.permeate, destination=m.fs.product.inlet)
-m.fs.s04 = Arc(source=m.fs.unit.retentate, destination=m.fs.disposal.inlet)
+    TransformationFactory("network.expand_arcs").apply_to(m)
 
-TransformationFactory("network.expand_arcs").apply_to(m)
+    # specify flowsheet
+    m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
+    m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 
-# specify flowsheet
-m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
-m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
+    # properties (cannot be fixed for initialization routines, must calculate the state variables)
+    for key in solute_list:
+        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
 
-# properties (cannot be fixed for initialization routines, must calculate the state variables)
-for key in solute_list:
-    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
+    var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
+    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 436.34
 
-var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
-var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 436.34
-
-m.fs.feed.properties.calculate_state(
-    var_args = var_args,  # feed mass fractions [-]
-    hold_state=True,  # fixes the calculated component mass flow rates
-)
-m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
-m.fs.P1.outlet.pressure[0].fix(10e5)
-
-# fully specify system
-m.fs.unit.properties_permeate[0].pressure.fix(101325)
-m.fs.unit.recovery_vol_phase.fix(0.6)
-
-for key in solute_list:
-    if key != "Cl":
-        m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp'])
-
-m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
-charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
-
-m.fs.unit.eq_electroneutrality = Constraint(
-    expr=0
-    == sum(
-        charge_comp[j]
-        * m.fs.unit.feed_side.properties_out[0].conc_mol_phase_comp["Liq", j]
-        for j in charge_comp
+    m.fs.feed.properties.calculate_state(
+        var_args = var_args,  # feed mass fractions [-]
+        hold_state=True,  # fixes the calculated component mass flow rates
     )
-)
-constraint_scaling_transform(m.fs.unit.eq_electroneutrality, 1)
+    m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
+    m.fs.P1.outlet.pressure[0].fix(10e5)
 
-def inverse_order_of_magnitude(number):
-    if number == 0:
-        return "undefined"  # The order of magnitude for zero is undefined
-    magnitude = math.floor(math.log10(abs(number)))
-    return 10**(-magnitude)
+    # fully specify system
+    m.fs.unit.properties_permeate[0].pressure.fix(101325)
+    m.fs.unit.recovery_vol_phase.fix(0.6)
 
-# scaling
-m.fs.properties.set_default_scaling(
-    "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
-)
+    for key in solute_list:
+        if key != "Cl":
+            m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp'])
 
-# Set the scaling to be the inverse of the order of magnitude of the mass concentration
-for key in solute_list:
+    m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
+    charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
+
+    m.fs.unit.eq_electroneutrality = Constraint(
+        expr=0
+        == sum(
+            charge_comp[j]
+            * m.fs.unit.feed_side.properties_out[0].conc_mol_phase_comp["Liq", j]
+            for j in charge_comp
+        )
+    )
+    constraint_scaling_transform(m.fs.unit.eq_electroneutrality, 1)
+
+    def inverse_order_of_magnitude(number):
+        if number == 0:
+            return "undefined"  # The order of magnitude for zero is undefined
+        magnitude = math.floor(math.log10(abs(number)))
+        return 10**(-magnitude)
+
+    # scaling
     m.fs.properties.set_default_scaling(
-        "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
-     )
+        "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
+    )
+
+    # Set the scaling to be the inverse of the order of magnitude of the mass concentration
+    for key in solute_list:
+        m.fs.properties.set_default_scaling(
+            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
+         )
 
 
-iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
+    iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
 
-iscale.calculate_scaling_factors(m)
+    iscale.calculate_scaling_factors(m)
 
-# initialize
-m.fs.feed.initialize()
-propagate_state(m.fs.s01)
-m.fs.P1.initialize()
-propagate_state(m.fs.s02)
-m.fs.unit.initialize()
-propagate_state(m.fs.s03)
-m.fs.product.initialize()
-propagate_state(m.fs.s04)
-m.fs.disposal.initialize()
+    # initialize
+    m.fs.feed.initialize()
+    propagate_state(m.fs.s01)
+    m.fs.P1.initialize()
+    propagate_state(m.fs.s02)
+    m.fs.unit.initialize()
+    propagate_state(m.fs.s03)
+    m.fs.product.initialize()
+    propagate_state(m.fs.s04)
+    m.fs.disposal.initialize()
 
-# solve model
-results = solver.solve(m, tee=True)
-m.fs.unit.report()
+    return m
