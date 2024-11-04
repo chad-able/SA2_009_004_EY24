@@ -35,10 +35,14 @@ m = ConcreteModel()
 m.fs = FlowsheetBlock(dynamic=False)
 
 nanofiltration(m)
+
+
 iscale.calculate_scaling_factors(m)
 
 # solve model
 results = solver.solve(m, tee=True)
 m.fs.unit.report()
 
+# print the Ba Molar Concentration @Inlet for fs.unit
+print(m.fs.unit.properties_permeate[0].conc_mol_phase_comp["Liq", "Ba"].value)
 

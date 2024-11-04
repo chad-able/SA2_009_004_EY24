@@ -81,7 +81,7 @@ def nanofiltration(m):
 
     # fully specify system
     m.fs.unit.properties_permeate[0].pressure.fix(101325)
-    m.fs.unit.recovery_vol_phase.fix(0.6)
+    m.fs.unit.recovery_vol_phase.fix(0.5)
 
     for key in solute_list:
         if key != "Cl":
