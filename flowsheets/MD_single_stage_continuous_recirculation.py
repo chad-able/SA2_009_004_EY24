@@ -51,9 +51,19 @@ from watertap.unit_models.MD.MD_channel_base import (
 )
 import watertap.property_models.seawater_prop_pack as props_sw
 import watertap.property_models.water_prop_pack as props_w
-from costing import QGESSCosting, QGESSCostingData
+from watertap.costing import WaterTAPCosting
+from watertap.costing.unit_models.pump import (
+    cost_pump,
+)
+from watertap.costing.unit_models.heater_chiller import (
+    cost_heater_chiller,
+)
+from watertap.core.util.initialization import (
+    assert_degrees_of_freedom,
+    interval_initializer,
+)
 
-__author__ = "Nick Tiwari"
+__author__ = "Elmira Shamlou"
 
 
 def main():
@@ -274,8 +284,7 @@ def build():
 
 
 def add_costs(m):
-    CE_index_year = "UKy_2019"
-    m.fs.costing = QGESSCosting()
+    m.fs.costing = WaterTAPCosting()
     m.fs.MD.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
     m.fs.heater.costing = UnitModelCostingBlock(
         flowsheet_costing_block=m.fs.costing,
@@ -287,22 +296,11 @@ def add_costs(m):
         costing_method=cost_heater_chiller,
         costing_method_arguments={"HC_type": "chiller"},
     )
-
-    # 11.2 is Water Treatment Process Pump
-    L_pump_accounts = ["11.2"]
     m.fs.pump_feed.costing = UnitModelCostingBlock(
         flowsheet_costing_block=m.fs.costing,
-        costing_method=QGESSCostingData.get_REE_costing,
-        costing_method_arguments={
-            "cost_accounts": L_pump_accounts,
-            "scaled_param": m.fs.leach_liquid_feed.flow_vol[0],
-            "source": 1,
-            "n_equip": 1,
-            "scale_down_parallel_equip": False,
-            "CE_index_year": CE_index_year,
-        },
+        costing_method=cost_pump,
+        costing_method_arguments={"pump_type": "low_pressure"},
     )
-
     m.fs.pump_permeate.costing = UnitModelCostingBlock(
         flowsheet_costing_block=m.fs.costing,
         costing_method=cost_pump,
