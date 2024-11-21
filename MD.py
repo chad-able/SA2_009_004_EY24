@@ -19,7 +19,6 @@ for area in np.linspace(30, 100, 10):
     data["Cold Out"].append(m.fs.MD.cold_ch_outlet.flow_mass_phase_comp[0, "Liq", "H2O"].value)
     data["Hot Out"].append(m.fs.MD.hot_ch_outlet.flow_mass_phase_comp[0, "Liq", "H2O"].value/hot_total)
 
-    print()
 #plt.plot(np.linspace(30, 100, 10), data["Cold Out"], 'bo')
 plt.plot(np.linspace(30, 100, 10), data["Hot Out"], 'ro')
 
