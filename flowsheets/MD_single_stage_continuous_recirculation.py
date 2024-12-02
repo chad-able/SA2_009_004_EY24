@@ -320,9 +320,9 @@ def add_costs(m):
     m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
 
 
-def set_operating_conditions(m):
+def set_operating_conditions(m, recovery=0.5, recycle_coeff=10, membrane_coeff=10):
     # overall recovery
-    m.fs.overall_recovery.fix(0.5)
+    m.fs.overall_recovery.fix(recovery)
     # feed
     feed_flow_mass = 1
     feed_mass_frac_TDS = 0.035
@@ -342,10 +342,10 @@ def set_operating_conditions(m):
     # concentrate separator
     # either the overall recovery or the split fraction will be fixed, but not both
     recycle_fraction = 0.9
-    recycle_flow_mass = 10 * feed_flow_mass
+    recycle_flow_mass = recycle_coeff * feed_flow_mass
     # MD
     membrane_pressure_drop = -5e5
-    membrane_area = 10 * recycle_flow_mass
+    membrane_area = membrane_coeff * recycle_flow_mass
     m.fs.MD.area.fix(membrane_area)  # m^2
     m.fs.MD.permeability_coef.fix(1e-10)  # kg/m-s-Pa
     m.fs.MD.membrane_thickness.fix(1e-4)  # m
