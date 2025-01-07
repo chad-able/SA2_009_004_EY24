@@ -13,7 +13,10 @@ membrane_coeff = 7
 recovery = 0.5
 
 m = MD.build()
+
+# This is where the parameters you need to change are
 MD.set_operating_conditions(m, recovery=recovery, recycle_coeff=membrane_coeff)
+
 MD.initialize_system(m)
 MD.solve(m)
 MD.display_system(m)

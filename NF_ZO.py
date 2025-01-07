@@ -11,6 +11,7 @@ from pyomo.environ import (
 )
 import json
 import math
+import inspect
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
 from idaes.core.solvers import get_solver
@@ -26,6 +27,8 @@ from watertap.costing.zero_order_costing import ZeroOrderCosting
 from watertap.unit_models.pressure_changer import Pump
 from watertap.core.wt_database import Database
 import watertap.property_models.multicomp_aq_sol_prop_pack as props
+from watertap.property_models.multicomp_aq_sol_prop_pack import MaterialFlowBasis
+from pprint import pprint
 from idaes.core.util.scaling import (
     calculate_scaling_factors,
     constraint_scaling_transform,
@@ -35,27 +38,24 @@ from idaes.core.util.scaling import (
 )
 
 def build(m):
-    # Read data from 'solute_parameters.json'
     with open("solute_parameters.json") as f:
         solute_data = json.load(f)
 
-    # solute list
     solute_list = list(solute_data.keys())
     mw_data = {key: solute_data[key]['mw'] for key in solute_list}
     charge = {key: solute_data[key]['charge'] for key in solute_list}
 
     m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
-                                               mw_data=mw_data,
-                                               charge=charge)
+                                             mw_data=mw_data,
+                                             charge=charge,
+                                             material_flow_basis=MaterialFlowBasis.mass)
 
-    # create units
     m.fs.feed = Feed(property_package=m.fs.properties)
     m.fs.product = Product(property_package=m.fs.properties)
     m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.unit = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
 
-    # connections
     m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
     m.fs.s02 = Arc(source=m.fs.P1.outlet, destination=m.fs.unit.inlet)
     m.fs.s03 = Arc(source=m.fs.unit.permeate, destination=m.fs.product.inlet)
@@ -63,25 +63,19 @@ def build(m):
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
-    # specify flowsheet
-    m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
-    m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
+    m.fs.feed.properties[0].pressure.fix(101325)
+    m.fs.feed.properties[0].temperature.fix(273.15 + 25)
 
-    # properties (cannot be fixed for initialization routines, must calculate the state variables)
+    # First fix water flow
+    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(100)
+
+    # Then fix solute flows
     for key in solute_list:
-        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
+        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key].fix(solute_data[key]['mass_concentration'])
 
-    var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
-    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 10
-
-    m.fs.feed.properties.calculate_state(
-        var_args = var_args,  # feed mass fractions [-]
-        hold_state=True,  # fixes the calculated component mass flow rates
-    )
-    m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
+    m.fs.P1.efficiency_pump.fix(0.80)
     m.fs.P1.outlet.pressure[0].fix(10e5)
 
-    # fully specify system
     m.fs.unit.properties_permeate[0].pressure.fix(101325)
     m.fs.unit.recovery_vol_phase.fix(0.5)
 
@@ -89,7 +83,8 @@ def build(m):
         if key != "Cl":
             m.fs.unit.rejection_phase_comp[0, "Liq", key].fix(solute_data[key]['rejection_phase_comp'])
 
-    m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
+    m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15
+
     charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
 
     m.fs.unit.eq_electroneutrality = Constraint(
@@ -104,16 +99,14 @@ def build(m):
 
     def inverse_order_of_magnitude(number):
         if number == 0:
-            return "undefined"  # The order of magnitude for zero is undefined
+            return "undefined"
         magnitude = math.floor(math.log10(abs(number)))
         return 10**(-magnitude)
 
-    # scaling
     m.fs.properties.set_default_scaling(
         "flow_mass_phase_comp", 1e-2, index=("Liq", "H2O")
     )
 
-    # Set the scaling to be the inverse of the order of magnitude of the mass concentration
     for key in solute_list:
         m.fs.properties.set_default_scaling(
             "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
@@ -173,8 +166,10 @@ def main():
     m.fs.costing = WaterTAPCosting()
     build(m)
     costing(m)
-    display_summary(m)
-
+    pprint(dir(m.fs.product.properties[0]))
+    print(value(m.fs.product.properties[0].dens_mass_phase['Liq']))
+    
+# TODO: Need to set feed flow mass fraction of TDS for OARO. 
 
 if __name__ == '__main__':
     main()
