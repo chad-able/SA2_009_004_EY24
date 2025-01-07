@@ -46,6 +46,8 @@ for rec, color in zip(recovery, color_cycle):
 ax[0].legend()
 ax[1].legend()
 ax[2].legend()
+
+plt.tight_layout()
 plt.savefig('seclcow.png', dpi=300)
 plt.show()
 

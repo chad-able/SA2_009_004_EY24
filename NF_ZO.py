@@ -21,6 +21,8 @@ from idaes.core import UnitModelCostingBlock
 import idaes.core.util.scaling as iscale
 from pyomo.util.check_units import assert_units_consistent
 from watertap.unit_models.nanofiltration_ZO import NanofiltrationZO
+from watertap.costing import WaterTAPCosting
+from watertap.costing.zero_order_costing import ZeroOrderCosting
 from watertap.unit_models.pressure_changer import Pump
 from watertap.core.wt_database import Database
 import watertap.property_models.multicomp_aq_sol_prop_pack as props
@@ -32,7 +34,7 @@ from idaes.core.util.scaling import (
     badly_scaled_var_generator,
 )
 
-def nanofiltration(m):
+def build(m):
     # Read data from 'solute_parameters.json'
     with open("solute_parameters.json") as f:
         solute_data = json.load(f)
@@ -70,7 +72,7 @@ def nanofiltration(m):
         m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
 
     var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
-    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 436.34
+    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 10
 
     m.fs.feed.properties.calculate_state(
         var_args = var_args,  # feed mass fractions [-]
@@ -134,3 +136,45 @@ def nanofiltration(m):
     m.fs.disposal.initialize()
 
     return m
+
+def costing(m):
+    # costing
+    m.fs.unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.P1.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.costing.cost_process()
+    m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_specific_electrical_carbon_intensity(
+        m.fs.feed.properties[0].flow_vol
+    )
+    m.fs.costing.initialize()
+    # consistent units
+    assert_units_consistent(m)
+
+def display_summary(m):
+    #print(results)
+    m.fs.feed.report()
+    m.fs.P1.report()
+    m.fs.unit.report()
+    m.fs.product.report()
+    m.fs.disposal.report()
+    m.fs.costing.total_capital_cost.display()
+    m.fs.costing.total_operating_cost.display()
+    m.fs.costing.LCOW.display()
+    m.fs.costing.specific_energy_consumption.display()
+    print("Permeate Flow (m3/s): " + "{:.4f}".format(value(m.fs.product.properties[0].flow_vol)))
+    print("Brine Flow (m3/s): " + "{:.4f}".format(value(m.fs.unit.feed_side.properties_out[0].flow_vol)))
+
+
+def main():
+    m = ConcreteModel()
+    m.fs = FlowsheetBlock(dynamic=False)
+    m.fs.costing = WaterTAPCosting()
+    build(m)
+    costing(m)
+    display_summary(m)
+
+
+if __name__ == '__main__':
+    main()
