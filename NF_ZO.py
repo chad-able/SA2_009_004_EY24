@@ -66,12 +66,14 @@ def build(m):
     m.fs.feed.properties[0].pressure.fix(101325)
     m.fs.feed.properties[0].temperature.fix(273.15 + 25)
 
+    water_flowrate = 100 # kg/s
+
     # First fix water flow
-    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(100)
+    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(water_flowrate)
 
     # Then fix solute flows
     for key in solute_list:
-        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key].fix(solute_data[key]['mass_concentration'])
+        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key].fix(solute_data[key]['mass_flow']*water_flowrate) # Mass flow units are kg-solute/kg-water
 
     m.fs.P1.efficiency_pump.fix(0.80)
     m.fs.P1.outlet.pressure[0].fix(10e5)
@@ -109,7 +111,7 @@ def build(m):
 
     for key in solute_list:
         m.fs.properties.set_default_scaling(
-            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
+            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_flow']), index=("Liq", key)
          )
 
 
