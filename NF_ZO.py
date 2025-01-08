@@ -145,6 +145,8 @@ def costing(m):
     # consistent units
     assert_units_consistent(m)
 
+from idaes.core.util.tables import create_stream_table_dataframe
+
 def display_summary(m):
     #print(results)
     m.fs.feed.report()
