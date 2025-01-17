@@ -34,12 +34,18 @@ from watertap.unit_models.reverse_osmosis_1D import (
     MassTransferCoefficient,
     PressureChangeType,
 )
+
+import sys
+sys.path.append('/Users/nicktiwari/Documents/watertap/')
 from watertap.unit_models.pressure_changer import Pump
 from watertap.costing import WaterTAPCosting
 from watertap.core.wt_database import Database
 import watertap.property_models.seawater_prop_pack as prop_SW
 import time
 import idaes.logger as idaeslog
+
+sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
 # get solver
 solver = get_solver()
@@ -124,38 +130,95 @@ m.fs.P1.outlet.pressure[0].setub(None)
 m.fs.RO.recovery_vol_phase[0,'Liq'].fix(0.2) #vary this number to explore different recoveries
 
 # costing
-m.fs.costing = WaterTAPCosting()
+m.fs.costing = QGESSCosting()
 
-m.fs.P1.costing = UnitModelCostingBlock(
-    flowsheet_costing_block=m.fs.costing
+CE_index_year = "UKy_2019"
+
+m.fs.land_cost = 1
+# Expression(
+#     expr=0.303736
+#     * 1e-6
+#     * getattr(units, "MUSD_" + CE_index_year)
+#     / units.ton
+#     * units.convert(m.fs.pump.flow_vol, to_units=units.ton / units.hr)
+#     * hours_per_shift
+#     * units.hr
+#     * shifts_per_day
+#     * units.day**-1
+#     * operating_days_per_year
+#     * units.day
+# )
+
+m.fs.costing.build_process_costs(
+    # arguments related to installation costs
+    piping_materials_and_labor_percentage=20,
+    electrical_materials_and_labor_percentage=20,
+    instrumentation_percentage=8,
+    plants_services_percentage=10,
+    process_buildings_percentage=40,
+    auxiliary_buildings_percentage=15,
+    site_improvements_percentage=10,
+    equipment_installation_percentage=17,
+    field_expenses_percentage=12,
+    project_management_and_construction_percentage=30,
+    process_contingency_percentage=15,
+    # argument related to Fixed OM costs
+    labor_types=[
+        "skilled",
+        "unskilled",
+        "supervisor",
+        "maintenance",
+        "technician",
+        "engineer",
+    ],
+    labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+    labor_burden=25,  # % fringe benefits
+    operators_per_shift=[4, 9, 2, 2, 2, 3],
+    hours_per_shift=8,
+    shifts_per_day=3,
+    operating_days_per_year=336,
+    mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
+    # arguments related to total owners costs
+    land_cost=m.fs.land_cost,
+    resources=[],
+    rates=[],
+    fixed_OM=True,
+    variable_OM=False,
+    feed_input=None,
+    efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
+    waste=[],
+    recovery_rate_per_year=None,
+    CE_index_year="UKy_2019",
+    watertap_blocks = [m.fs.RO, m.fs.P1]
+
 )
-m.fs.RO.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
-m.fs.costing.cost_flow(m.fs.P1.work_mechanical[0], "electricity")
-m.fs.costing.cost_process()
-m.fs.costing.add_LCOW(m.fs.RO.mixed_permeate[0].flow_vol)
-m.fs.costing.add_specific_energy_consumption(m.fs.RO.mixed_permeate[0].flow_vol)
-m.fs.costing.initialize()
 
+QGESSCostingData.costing_initialization(m.fs.costing)
+QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing)
 
 # consistent units
 assert_units_consistent(m)
 
 # optimize
-m.fs.objective = Objective(expr=m.fs.costing.LCOW)
+m.fs.objective = Objective(expr=m.fs.costing.total_plant_cost)
 optimization_results = solver.solve(m)
 assert_optimal_termination(results)
+
+QGESSCostingData.report(m.fs.costing)
+QGESSCostingData.display_bare_erected_costs(m.fs.costing)
+QGESSCostingData.display_flowsheet_cost(m.fs.costing)
 
 #print
 m.fs.feed.report()
 m.fs.P1.report()
 m.fs.RO.report()
-m.fs.costing.total_capital_cost.display()
-m.fs.costing.total_operating_cost.display()
-m.fs.costing.LCOW.display()
-m.fs.costing.specific_energy_consumption.display()
+
+#m.fs.costing.LCOW.display()
+#m.fs.costing.specific_energy_consumption.display()
 
 print("Permeate flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.mixed_permeate[0].flow_vol)))
 print("Brine flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.feed_side.properties[0, 1].flow_vol)))
+
 
 if value(m.fs.P1.outlet.pressure[0]) >= 85e5:
     print("INFEASIBLE") #not feasible to operate conventional RO membranes above this pressure

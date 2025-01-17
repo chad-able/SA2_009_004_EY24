@@ -1,0 +1,289 @@
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.watertap.property_models.multicomp_aq_sol_prop_pack: While using the calculate_state method on fs.feed.properties[0.0], variable flow_mass_phase_comp was provided as an argument in var_args, but it does not have a scaling factor. This suggests that the calculate_scaling_factor method has not been used or the variable was created on demand after the scaling factors were calculated. It is recommended to touch all relevant variables (i.e. call them or set an initial value) before using the calculate_scaling_factor method.
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.feed.properties[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.product.properties[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.disposal.properties[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_in[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.feed_side.properties_out[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.unit.properties_permeate[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_in[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,H2O]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Ba]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Br]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,CO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Ca]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Cl]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,HCO3]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,K]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Li]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Mg]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Mn]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Na]
+2024-10-30 14:31:45 [WARNING] idaes.core.util.scaling: Missing scaling factor for fs.P1.control_volume.properties_out[0.0].flow_mol_phase_comp[Liq,Sr]
+2024-10-30 14:31:46 [INFO] idaes.init.fs.feed: Initialization Complete.
+2024-10-30 14:31:46 [INFO] idaes.init.fs.P1.control_volume: Initialization Complete
+2024-10-30 14:31:46 [INFO] idaes.init.fs.P1: Initialization Complete: optimal - Optimal Solution Found
+2024-10-30 14:31:46 [INFO] idaes.init.fs.unit.feed_side: Initialization Complete
+2024-10-30 14:31:46 [INFO] idaes.init.fs.unit.feed_side.properties_in: fs.unit.feed_side.properties_in State Released.
+2024-10-30 14:31:46 [INFO] idaes.init.fs.unit: Initialization Complete: optimal - Optimal Solution Found
+2024-10-30 14:31:46 [INFO] idaes.init.fs.product: Initialization Complete.
+2024-10-30 14:31:46 [INFO] idaes.init.fs.disposal: Initialization Complete.
+WARNING: model contains export suffix 'scaling_factor' that contains 30
+component keys that are not exported as part of the NL file.  Skipping.
+WARNING: model contains export suffix 'scaling_factor' that contains 3 keys
+that are not Var, Constraint, Objective, or the model.  Skipping.
+Ipopt 3.13.2: nlp_scaling_method=gradient-based
+tol=1e-06
+max_iter=200
+
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit http://projects.coin-or.org/Ipopt
+
+This version of Ipopt was compiled from source code available at
+    https://github.com/IDAES/Ipopt as part of the Institute for the Design of
+    Advanced Energy Systems Process Systems Engineering Framework (IDAES PSE
+    Framework) Copyright (c) 2018-2019. See https://github.com/IDAES/idaes-pse.
+
+This version of Ipopt was compiled using HSL, a collection of Fortran codes
+    for large-scale scientific computation.  All technical papers, sales and
+    publicity material resulting from use of the HSL codes within IPOPT must
+    contain the following acknowledgement:
+        HSL, a collection of Fortran codes for large-scale scientific
+        computation. See http://www.hsl.rl.ac.uk.
+******************************************************************************
+
+This is Ipopt version 3.13.2, running with linear solver ma27.
+
+Number of nonzeros in equality constraint Jacobian...:     1199
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:      373
+
+Total number of variables............................:      325
+                     variables with only lower bounds:      190
+                variables with lower and upper bounds:      118
+                     variables with only upper bounds:        0
+Total number of equality constraints.................:      324
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  0.0000000e+00 9.99e+03 1.00e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  0.0000000e+00 9.98e+01 2.07e+04  -1.0 8.79e-01    -  4.37e-02 9.90e-01h  1
+   2  0.0000000e+00 8.89e-01 1.55e+04  -1.0 8.61e-01    -  1.09e-01 9.91e-01h  1
+   3  0.0000000e+00 8.79e-06 1.00e+03  -1.0 1.68e-02    -  9.90e-01 1.00e+00h  1
+   4  0.0000000e+00 4.60e-10 8.10e+03  -1.0 2.14e-02    -  9.90e-01 1.00e+00h  1
+   5  0.0000000e+00 4.58e-06 7.16e+01  -1.0 2.14e+00    -  9.91e-01 1.00e+00h  1
+   6  0.0000000e+00 1.04e-04 1.35e-02  -1.0 1.90e+02    -  1.00e+00 1.00e+00H  1
+   7  0.0000000e+00 1.07e-06 3.66e-01  -3.8 1.04e+00    -  1.00e+00 1.00e+00h  1
+   8  0.0000000e+00 1.24e-03 1.19e-05  -3.8 6.91e+02    -  1.00e+00 1.00e+00H  1
+   9  0.0000000e+00 7.52e-11 1.51e-06  -5.7 2.87e-03    -  1.00e+00 1.00e+00h  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  0.0000000e+00 3.25e-09 3.59e-07  -7.0 5.80e-02    -  1.00e+00 1.00e+00h  1
+
+Number of Iterations....: 10
+
+                                   (scaled)                 (unscaled)
+Objective...............:   0.0000000000000000e+00    0.0000000000000000e+00
+Dual infeasibility......:   3.5923252260025573e-07    3.5923252260025573e-07
+Constraint violation....:   1.0913936421275139e-11    3.2460150228788413e-09
+Complementarity.........:   9.0911023919690709e-08    9.0911023919690709e-08
+Overall NLP error.......:   3.5923252260025573e-07    3.5923252260025573e-07
+
+
+Number of objective function evaluations             = 13
+Number of objective gradient evaluations             = 11
+Number of equality constraint evaluations            = 13
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 11
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 10
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.006
+Total CPU secs in NLP function evaluations           =      0.000
+
+EXIT: Optimal Solution Found.
+
+====================================================================================
+Unit : fs.unit                                                             Time: 0.0
+------------------------------------------------------------------------------------
+    Unit Performance
+
+    Variables: 
+
+    Key                                : Value      : Units             : Fixed : Bounds
+         Ba Molar Concentration @Inlet :   0.032168 : mole / meter ** 3 : False : (0, None)
+        Ba Molar Concentration @Outlet :   0.070288 : mole / meter ** 3 : False : (0, None)
+      Ba Molar Concentration @Permeate :  0.0067553 : mole / meter ** 3 : False : (0, None)
+                          Ba Rejection :    0.79000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Br Molar Concentration @Inlet :     5.3310 : mole / meter ** 3 : False : (0, None)
+        Br Molar Concentration @Outlet :     12.528 : mole / meter ** 3 : False : (0, None)
+      Br Molar Concentration @Permeate :    0.53310 : mole / meter ** 3 : False : (0, None)
+                          Br Rejection :    0.90000 :     dimensionless :  True : (-0.999999, 0.999999)
+        CO3 Molar Concentration @Inlet :     1.5213 : mole / meter ** 3 : False : (0, None)
+       CO3 Molar Concentration @Outlet :     3.5067 : mole / meter ** 3 : False : (0, None)
+     CO3 Molar Concentration @Permeate :    0.19778 : mole / meter ** 3 : False : (0, None)
+                         CO3 Rejection :    0.87000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Ca Molar Concentration @Inlet :     147.00 : mole / meter ** 3 : False : (0, None)
+        Ca Molar Concentration @Outlet :     321.20 : mole / meter ** 3 : False : (0, None)
+      Ca Molar Concentration @Permeate :     30.871 : mole / meter ** 3 : False : (0, None)
+                          Ca Rejection :    0.79000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Cl Molar Concentration @Inlet :     3180.1 : mole / meter ** 3 : False : (0, None)
+        Cl Molar Concentration @Outlet :     3575.9 : mole / meter ** 3 : False : (0, None)
+      Cl Molar Concentration @Permeate :     2916.3 : mole / meter ** 3 : False : (0, None)
+                          Cl Rejection :   0.082969 :     dimensionless : False : (-0.999999, 0.999999)
+       HCO3 Molar Concentration @Inlet :     7.1199 : mole / meter ** 3 : False : (0, None)
+      HCO3 Molar Concentration @Outlet :     15.130 : mole / meter ** 3 : False : (0, None)
+    HCO3 Molar Concentration @Permeate :     1.7800 : mole / meter ** 3 : False : (0, None)
+                        HCO3 Rejection :    0.75000 :     dimensionless :  True : (-0.999999, 0.999999)
+          K Molar Concentration @Inlet :     19.380 : mole / meter ** 3 : False : (0, None)
+         K Molar Concentration @Outlet :     19.671 : mole / meter ** 3 : False : (0, None)
+       K Molar Concentration @Permeate :     19.186 : mole / meter ** 3 : False : (0, None)
+                           K Rejection :   0.010000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Li Molar Concentration @Inlet :     2.9123 : mole / meter ** 3 : False : (0, None)
+        Li Molar Concentration @Outlet :     2.9560 : mole / meter ** 3 : False : (0, None)
+      Li Molar Concentration @Permeate :     2.8832 : mole / meter ** 3 : False : (0, None)
+                          Li Rejection :   0.010000 :     dimensionless :  True : (-0.999999, 0.999999)
+                         Membrane Area :     52584. :        meter ** 2 : False : (0.0, 1000000.0)
+         Mg Molar Concentration @Inlet :     69.644 : mole / meter ** 3 : False : (0, None)
+        Mg Molar Concentration @Outlet :     167.84 : mole / meter ** 3 : False : (0, None)
+      Mg Molar Concentration @Permeate :     4.1786 : mole / meter ** 3 : False : (0, None)
+                          Mg Rejection :    0.94000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Mn Molar Concentration @Inlet :   0.030813 : mole / meter ** 3 : False : (0, None)
+        Mn Molar Concentration @Outlet :   0.074260 : mole / meter ** 3 : False : (0, None)
+      Mn Molar Concentration @Permeate :  0.0018488 : mole / meter ** 3 : False : (0, None)
+                          Mn Rejection :    0.94000 :     dimensionless :  True : (-0.999999, 0.999999)
+         Na Molar Concentration @Inlet :     2556.6 : mole / meter ** 3 : False : (0, None)
+        Na Molar Concentration @Outlet :     2594.9 : mole / meter ** 3 : False : (0, None)
+      Na Molar Concentration @Permeate :     2531.0 : mole / meter ** 3 : False : (0, None)
+                          Na Rejection :   0.010000 :     dimensionless :  True : (-0.999999, 0.999999)
+            Solvent Mass Recovery Rate :    0.61245 :     dimensionless : False : (0.01, 0.999999)
+               Solvent Volumetric Flux : 5.0821e-06 :    meter / second : False : (0.0, 0.0001)
+         Sr Molar Concentration @Inlet :     2.6733 : mole / meter ** 3 : False : (0, None)
+        Sr Molar Concentration @Outlet :     5.8411 : mole / meter ** 3 : False : (0, None)
+      Sr Molar Concentration @Permeate :    0.56138 : mole / meter ** 3 : False : (0, None)
+                          Sr Rejection :    0.79000 :     dimensionless :  True : (-0.999999, 0.999999)
+              Volumetric Recovery Rate :    0.60000 :     dimensionless :  True : (0.01, 0.999999)
+
+    Expressions: 
+
+    Key                        : Value   : Units
+    Volumetric Flowrate @Inlet : 0.53187 : meter ** 3 / second
+
+------------------------------------------------------------------------------------
+    Stream Table
+                                            Units       Feed Inlet  Feed Outlet  Permeate Outlet
+    flow_mol_phase_comp ('Liq', 'H2O')   mole / second      24241.      9394.7         14846.   
+    flow_mol_phase_comp ('Liq', 'Ba')    mole / second    0.017109    0.014954      0.0021558   
+    flow_mol_phase_comp ('Liq', 'Br')    mole / second      2.8354      2.6653        0.17013   
+    flow_mol_phase_comp ('Liq', 'CO3')   mole / second     0.80917     0.74605       0.063115   
+    flow_mol_phase_comp ('Liq', 'Ca')    mole / second      78.187      68.336         9.8516   
+    flow_mol_phase_comp ('Liq', 'Cl')    mole / second      1691.4      760.77         930.66   
+    flow_mol_phase_comp ('Liq', 'HCO3')  mole / second      3.7869      3.2189        0.56803   
+    flow_mol_phase_comp ('Liq', 'K')     mole / second      10.308      4.1849         6.1228   
+    flow_mol_phase_comp ('Liq', 'Li')    mole / second      1.5490     0.62889        0.92010   
+    flow_mol_phase_comp ('Liq', 'Mg')    mole / second      37.042      35.708         1.3335   
+    flow_mol_phase_comp ('Liq', 'Mn')    mole / second    0.016389    0.015799     0.00059000   
+    flow_mol_phase_comp ('Liq', 'Na')    mole / second      1359.8      552.07         807.71   
+    flow_mol_phase_comp ('Liq', 'Sr')    mole / second      1.4218      1.2427        0.17915   
+    temperature                                 kelvin      298.15      298.15         298.15   
+    pressure                                    pascal  1.0000e+06  1.0000e+06     1.0132e+05   
+====================================================================================
