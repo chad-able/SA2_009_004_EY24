@@ -19,7 +19,11 @@ from pyomo.environ import (
     assert_optimal_termination,
     Block,
     Objective,
+    Expression
 )
+
+from pyomo.environ import units as pyunits
+
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
 from idaes.core.solvers import get_solver
@@ -55,10 +59,16 @@ m = ConcreteModel()
 m.fs = FlowsheetBlock(dynamic=False)
 m.fs.prop_desal = prop_SW.SeawaterParameterBlock()
 
+# costing
+m.fs.costing2 = QGESSCosting()
+m.fs.costing = WaterTAPCosting()
 
 # create units
 m.fs.feed = Feed(property_package=m.fs.prop_desal)
+
 m.fs.P1 = Pump(property_package=m.fs.prop_desal)
+m.fs.P1.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+
 m.fs.RO = ReverseOsmosis1D(
     property_package=m.fs.prop_desal,
     has_pressure_change=False,
@@ -66,6 +76,10 @@ m.fs.RO = ReverseOsmosis1D(
     mass_transfer_coefficient=MassTransferCoefficient.none,
     concentration_polarization_type=ConcentrationPolarizationType.none,
 )
+m.fs.RO.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+m.fs.costing.cost_process()
+m.fs.costing.add_specific_energy_consumption(m.fs.RO.mixed_permeate[0].flow_vol)
+m.fs.costing.add_LCOW(m.fs.RO.mixed_permeate[0].flow_vol)
 
 # connections
 m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
@@ -81,7 +95,7 @@ m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.10
 m.fs.feed.properties.calculate_state(
     var_args={
-        ("flow_mass_phase_comp", ("Liq", "H2O")): 100.0,  # feed mass flow rate [kg/s]
+        ("flow_mass_phase_comp", ("Liq", "H2O")): 100,  # feed mass flow rate [kg/s]
         ("mass_frac_phase_comp", ("Liq", "TDS")): value(
             m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"])
     },  # feed TDS mass fraction [-]
@@ -89,7 +103,7 @@ m.fs.feed.properties.calculate_state(
 )
 m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
 m.fs.P1.outlet.pressure[0].fix(70e5)
-membrane_area = 11100 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
+membrane_area = 12100 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
 A = 4.2e-12
 B = 3.5e-8
 pressure_atmospheric = 101325
@@ -129,9 +143,6 @@ m.fs.P1.outlet.pressure[0].setlb(1e5)
 m.fs.P1.outlet.pressure[0].setub(None)
 m.fs.RO.recovery_vol_phase[0,'Liq'].fix(0.2) #vary this number to explore different recoveries
 
-# costing
-m.fs.costing = QGESSCosting()
-
 CE_index_year = "UKy_2019"
 
 m.fs.land_cost = 1
@@ -149,7 +160,7 @@ m.fs.land_cost = 1
 #     * units.day
 # )
 
-m.fs.costing.build_process_costs(
+m.fs.costing2.build_process_costs(
     # arguments related to installation costs
     piping_materials_and_labor_percentage=20,
     electrical_materials_and_labor_percentage=20,
@@ -183,7 +194,7 @@ m.fs.costing.build_process_costs(
     resources=[],
     rates=[],
     fixed_OM=True,
-    variable_OM=False,
+    variable_OM=True,
     feed_input=None,
     efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
     waste=[],
@@ -193,32 +204,50 @@ m.fs.costing.build_process_costs(
 
 )
 
-QGESSCostingData.costing_initialization(m.fs.costing)
-QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing)
+denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+m.fs.costing.prommis_LCOW = Expression(expr=m.fs.costing2.annualized_cost / denominator * 1e6)
+
+QGESSCostingData.costing_initialization(m.fs.costing2)
+QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
 
 # consistent units
 assert_units_consistent(m)
 
 # optimize
-m.fs.objective = Objective(expr=m.fs.costing.total_plant_cost)
+m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
 optimization_results = solver.solve(m)
 assert_optimal_termination(results)
 
-QGESSCostingData.report(m.fs.costing)
-QGESSCostingData.display_bare_erected_costs(m.fs.costing)
-QGESSCostingData.display_flowsheet_cost(m.fs.costing)
+QGESSCostingData.report(m.fs.costing2)
+QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
 
 #print
 m.fs.feed.report()
 m.fs.P1.report()
 m.fs.RO.report()
 
-#m.fs.costing.LCOW.display()
-#m.fs.costing.specific_energy_consumption.display()
 
 print("Permeate flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.mixed_permeate[0].flow_vol)))
 print("Brine flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.feed_side.properties[0, 1].flow_vol)))
 
+print(
+        "Energy Consumption: %.1f kWh/m3"
+        % value(m.fs.costing.specific_energy_consumption)
+    )
+
+# MUSD/year
+print(pyunits.get_units(m.fs.costing2.annualized_cost))
+flowrate_year = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+
+print(
+    "PROMMIS LCOW: %.2f USD/ton"
+    % value(m.fs.costing.prommis_LCOW)
+    )
+
+print(
+    "WaterTAP LCOW: %.2f USD/ton"
+    % value(m.fs.costing.LCOW)
+    )
 
 if value(m.fs.P1.outlet.pressure[0]) >= 85e5:
     print("INFEASIBLE") #not feasible to operate conventional RO membranes above this pressure
