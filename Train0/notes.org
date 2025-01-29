@@ -1,5 +1,0 @@
-* Costing
-WaterTap costing for RO unit can be found [[file:/Users/nicktiwari/Documents/watertap/watertap/costing/unit_models/reverse_osmosis.py][here]]
-
-- Membrane cost is 30 $USD_2018 / m^2
-- 
