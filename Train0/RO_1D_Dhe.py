@@ -302,6 +302,7 @@ def main():
     process_value = np.arange(2000, 12000, 500)
     results = {}
 
+    # visualize process
     RO_1D_Dhe(process_variable="recovery", process_value=0.2, vis=True)
 
     for pv in process_value:
