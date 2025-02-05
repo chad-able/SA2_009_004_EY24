@@ -49,6 +49,7 @@ from watertap.core.wt_database import Database
 import watertap.property_models.seawater_prop_pack as prop_SW
 import time
 import idaes.logger as idaeslog
+from NF_ZO import nanofiltration
 
 sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
@@ -63,6 +64,11 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m = ConcreteModel()
     m.fs = FlowsheetBlock(dynamic=False)
     m.fs.prop_desal = prop_SW.SeawaterParameterBlock()
+
+    # Nanofiltration
+    m2 = ConcreteModel()
+    m2.fs = FlowsheetBlock(dynamic=False)
+    nanofiltration(m2)
 
     # costing
     m.fs.costing2 = QGESSCosting()
@@ -228,6 +234,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # optimize
     m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
     optimization_results = solver.solve(m)
+    nf_results = solver.solve(m2)
     assert_optimal_termination(results)
 
     QGESSCostingData.report(m.fs.costing2)

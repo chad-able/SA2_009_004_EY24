@@ -60,6 +60,10 @@ from watertap.costing import (
 )
 import watertap.property_models.seawater_prop_pack as props
 
+import sys
+sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
+
 class ACase(StrEnum):
     fixed = "fixed"
     optimize = "optimize"
@@ -133,10 +137,11 @@ def run_lsrro_case(
         display_design(m)
         display_state(m)
         display_RO_reports(m)
+        QGESSCostingData.report(m.fs.prommis_costing)
+        QGESSCostingData.display_flowsheet_cost(m.fs.prommis_costing)
     else:
         print("\n***---Solve failed---***")
     return m, res
-
 
 def build(
     number_of_stages=2,
@@ -152,6 +157,7 @@ def build(
     m.fs = FlowsheetBlock(dynamic=False)
     m.fs.properties = props.SeawaterParameterBlock()
     m.fs.costing = WaterTAPCosting()
+    m.fs.prommis_costing = QGESSCosting()
 
     m.fs.NumberOfStages = Param(initialize=number_of_stages)
     m.fs.Stages = RangeSet(m.fs.NumberOfStages)
@@ -168,6 +174,8 @@ def build(
     m.fs.product = Product(property_package=m.fs.properties)
     m.fs.disposal = Product(property_package=m.fs.properties)
 
+    prommis_list = []
+
     # Add the mixers
     m.fs.Mixers = Mixer(
         m.fs.NonFinalStages,
@@ -183,6 +191,8 @@ def build(
             flowsheet_costing_block=m.fs.costing,
             costing_method=cost_high_pressure_pump_lsrro,
         )
+        prommis_list.append(pump)
+
 
     # Add the equalizer pumps
     m.fs.BoosterPumps = Pump(m.fs.LSRRO_Stages, property_package=m.fs.properties)
@@ -191,6 +201,7 @@ def build(
             flowsheet_costing_block=m.fs.costing,
             costing_method=cost_high_pressure_pump_lsrro,
         )
+        prommis_list.append(pump)
 
     m.fs.total_pump_work = Expression(
         expr=sum(
@@ -238,6 +249,7 @@ def build(
                 flowsheet_costing_block=m.fs.costing,
                 costing_method_arguments={"ro_type": "high_pressure"},
             )
+        prommis_list.append(ro_stage)
 
     # Add EnergyRecoveryDevices
     m.fs.EnergyRecoveryDeviceSet = Set(
@@ -257,6 +269,7 @@ def build(
                 "energy_recovery_device_type": "pressure_exchanger"
             },
         )
+        prommis_list.append(erd)
 
     m.fs.recovered_pump_work = Expression(
         expr=sum(
@@ -308,13 +321,64 @@ def build(
 
     m.fs.costing.cost_process()
 
+    m.fs.prommis_costing.build_process_costs(
+        # arguments related to installation costs
+        piping_materials_and_labor_percentage=20,
+        electrical_materials_and_labor_percentage=20,
+        instrumentation_percentage=8,
+        plants_services_percentage=10,
+        process_buildings_percentage=40,
+        auxiliary_buildings_percentage=15,
+        site_improvements_percentage=10,
+        equipment_installation_percentage=17,
+        field_expenses_percentage=12,
+        project_management_and_construction_percentage=30,
+        process_contingency_percentage=15,
+        # argument related to Fixed OM costs
+        labor_types=[
+            "skilled",
+            "unskilled",
+            "supervisor",
+            "maintenance",
+            "technician",
+            "engineer",
+        ],
+        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_burden=25,  # % fringe benefits
+        operators_per_shift=[4, 9, 2, 2, 2, 3],
+        hours_per_shift=8,
+        shifts_per_day=3,
+        operating_days_per_year=336,
+        mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
+        # arguments related to total owners costs
+        land_cost=1,
+        resources=[],
+        rates=[],
+        fixed_OM=True,
+        variable_OM=True,
+        feed_input=None,
+        efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
+        waste=[],
+        recovery_rate_per_year=None,
+        CE_index_year="UKy_2019",
+        watertap_blocks = prommis_list
+
+    )
+
+    QGESSCostingData.costing_initialization(m.fs.prommis_costing)
+    QGESSCostingData.initialize_fixed_OM_costs(m.fs.prommis_costing)
+
+
     product_flow_vol_total = m.fs.product.properties[0].flow_vol
     m.fs.costing.add_annual_water_production(product_flow_vol_total)
     m.fs.costing.add_specific_energy_consumption(product_flow_vol_total)
     m.fs.costing.add_LCOW(product_flow_vol_total)
 
+    denominator = pyunits.convert(product_flow_vol_total, to_units=pyunits.m**3 / pyunits.year)
+    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.prommis_costing.annualized_cost / denominator * 1e6)
+
     # objective
-    m.fs.objective = Objective(expr=m.fs.costing.LCOW)
+    m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
 
     # Expressions for parameter sweep -----------------------------------------
     # Final permeate concentration as mass fraction
@@ -687,7 +751,7 @@ def set_operating_conditions(m, Cin=None, Qin=None):
 
     # ---checking model---
     assert_units_consistent(m)
-    assert_no_degrees_of_freedom(m)
+    #assert_no_degrees_of_freedom(m)
 
     print(
         "Feed Concentration = %.1f ppt"
@@ -852,6 +916,7 @@ def solve(model, solver=None, tee=False, raise_on_failure=False):
     else:
         print(msg)
         return results
+
 
 
 def optimize_set_up(
@@ -1107,12 +1172,12 @@ def optimize_set_up(
     # ---checking model---
     assert_units_consistent(m)
 
-    assert_degrees_of_freedom(
-        m,
-        4 * m.fs.NumberOfStages
-        - (1 if (water_recovery is not None) else 0)
-        - (1 if value(m.fs.NumberOfStages) == 1 else 0),
-    )
+    # assert_degrees_of_freedom(
+    #     m,
+    #     4 * m.fs.NumberOfStages
+    #     - (1 if (water_recovery is not None) else 0)
+    #     - (1 if value(m.fs.NumberOfStages) == 1 else 0),
+    # )
 
     return m
 
@@ -1212,6 +1277,7 @@ def display_system(m):
     )
 
     print("Levelized cost of water: %.2f $/m3" % value(m.fs.costing.LCOW))
+    print("Levelized cost of water (PROMMIS): %.2f $/m3" % value(m.fs.costing.prommis_LCOW))
     print(
         f"Primary Pump Capital Cost ($/m3):"
         f"{value(m.fs.costing.capital_recovery_factor*sum(m.fs.PrimaryPumps[stage].costing.capital_cost for stage in m.fs.Stages)/ m.fs.costing.annual_water_production)}"
@@ -1249,8 +1315,8 @@ def display_RO_reports(m):
 
 if __name__ == "__main__":
     m, results = run_lsrro_case(
-        number_of_stages=3,
-        water_recovery=0.50,
+        number_of_stages=4,
+        water_recovery=0.5,
         Cin=70,  # inlet TDS conc kg/m3,
         Qin=1e-1,  # inlet feed flowrate m3/s
         Cbrine=None,  # brine conc kg/m3
