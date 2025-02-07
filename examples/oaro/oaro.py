@@ -10,6 +10,11 @@ from watertap.core.solvers import get_solver
 from idaes.core.util.misc import StrEnum
 from watertap.core.util.model_diagnostics import infeasible as infeas
 
+# Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/oaro/oaro.py
+# Modifications by Adam Atia on 2/7/2025
+# Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
+# Takeaway: Membrane areas should be adjusted with flowrate, and some vars should be unfixed for optimization.
+
 
 class ERDtype(StrEnum):
     pump_as_turbine = "pump_as_turbine"
@@ -34,6 +39,25 @@ def main(erd_type=ERDtype.pump_as_turbine, raise_on_failure=False):
 
     oaro.initialize_system(m, solver=solver)
     oaro.optimize_set_up(m)
+
+    # For optimization, consider fixing system recovery rate. Will set to 50%, though low for current settings/application, consistent with MD recovery setting.
+    # m.fs.volumetric_recovery.fix(0.5)
+
+    # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
+    m.fs.OARO.area.unfix()
+    m.fs.OARO.area.setub(None)
+    m.fs.OARO.length.setub(None)
+    m.fs.OARO.width.setub(None)
+
+    # Unfix OARO feed velocity, which would otherwise remained fixed at 10 cm/s
+    m.fs.OARO.feed_side.velocity[0,0].unfix()
+
+    # Removing upper bounds on RO module dimensions, but more importantly, unfixing RO module width!
+    m.fs.RO.width.unfix()
+    m.fs.RO.area.setub(None)
+    m.fs.RO.width.setub(None)
+    m.fs.RO.length.setub(None)
+
     res = oaro.solve(m, solver=solver)
     assert_optimal_termination(res)
 
@@ -56,6 +80,9 @@ if __name__ == "__main__":
     m.fs.OARO.area.setub(None)
     m.fs.OARO.length.setub(None)
     m.fs.OARO.width.setub(None)
+
+    # Unfix OARO feed velocity
+    m.fs.OARO.feed_side.velocity[0,0].unfix()
 
     # Removing upper bounds on RO module dimensions, but more importantly, unfixing RO module width!
     m.fs.RO.width.unfix()

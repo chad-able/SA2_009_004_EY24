@@ -11,7 +11,8 @@ from watertap.core.util.model_diagnostics import infeasible as infeas
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
 # Modifications by Adam Atia on 2/7/2025
 # Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
-# Takeaway: 
+# Takeaway: Membrane area should be adjusted with flowrate.
+
 
 area = 100
 def main(vis = False):
@@ -28,6 +29,8 @@ def main(vis = False):
     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
         feed_flow_mass * feed_mass_frac_H2O
     )
+
+    # Note: MD area is already fixed to 100m2 in the flowsheet.
     m.fs.MD.area.fix(area)
     
     MD.initialize_system(m)
