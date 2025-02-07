@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
 
     # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
-    for i in range(5,6):
+    for i in range(2,6):
         feed_flow_mass = i # kg/s
         m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "NaCl"].fix(
             feed_flow_mass * feed_mass_frac_NaCl
@@ -81,6 +81,8 @@ if __name__ == "__main__":
             oaro.display_system(m)
 
             m.fs.OARO.area.display()
+            m.fs.RO.area.display()
+
         else:
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
