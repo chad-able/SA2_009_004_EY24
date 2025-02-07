@@ -41,6 +41,7 @@ from idaes.models.unit_models import Feed, Product, Mixer
 from idaes.models.unit_models.mixer import MomentumMixingType
 import idaes.core.util.scaling as iscale
 import idaes.logger as idaeslogger
+import time
 
 from watertap.unit_models.reverse_osmosis_1D import (
     ReverseOsmosis1D,
@@ -59,6 +60,8 @@ from watertap.costing import (
     register_costing_parameter_block,
 )
 import watertap.property_models.seawater_prop_pack as props
+
+from NF_ZO import nanofiltration
 
 import sys
 sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
@@ -79,7 +82,6 @@ class ABTradeoff(StrEnum):
     inequality_constraint = "inequality_constraint"
     equality_constraint = "equality_constraint"
     none = "none"
-
 
 def run_lsrro_case(
     number_of_stages,
@@ -136,6 +138,7 @@ def run_lsrro_case(
         display_system(m)
         display_design(m)
         display_state(m)
+        save_state(m, filename = 'lsrro_state.json')
         display_RO_reports(m)
         QGESSCostingData.report(m.fs.prommis_costing)
         QGESSCostingData.display_flowsheet_cost(m.fs.prommis_costing)
@@ -173,6 +176,8 @@ def build(
     m.fs.feed = Feed(property_package=m.fs.properties)
     m.fs.product = Product(property_package=m.fs.properties)
     m.fs.disposal = Product(property_package=m.fs.properties)
+
+    nanofiltration(m)
 
     prommis_list = []
 
@@ -321,6 +326,8 @@ def build(
 
     m.fs.costing.cost_process()
 
+    # Append NF
+    prommis_list.extend([m.fs.unit2, m.fs.P1])
     m.fs.prommis_costing.build_process_costs(
         # arguments related to installation costs
         piping_materials_and_labor_percentage=20,
@@ -367,7 +374,6 @@ def build(
 
     QGESSCostingData.costing_initialization(m.fs.prommis_costing)
     QGESSCostingData.initialize_fixed_OM_costs(m.fs.prommis_costing)
-
 
     product_flow_vol_total = m.fs.product.properties[0].flow_vol
     m.fs.costing.add_annual_water_production(product_flow_vol_total)
@@ -614,14 +620,17 @@ def build(
         destination=m.fs.disposal.inlet,
     )
 
-    # additional bounding
+    #additional bounding
     if has_NaCl_solubility_limit:
         for b in m.component_data_objects(Block, descend_into=True):
             # NaCl solubility limit
             if hasattr(b, "is_property_constructed") and b.is_property_constructed(
                 "mass_frac_phase_comp"
             ):
-                b.mass_frac_phase_comp["Liq", "TDS"].setub(0.2614)
+                try:
+                    b.mass_frac_phase_comp["Liq", "TDS"].setub(0.2614)
+                except:
+                    pass
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -1239,6 +1248,56 @@ def display_state(m):
 
     print_state(f"Disposal", m.fs.disposal.inlet)
     print_state(f"Product", m.fs.product.inlet)
+
+def get_state_data(m):
+    data = {}
+    
+    def get_stream_data(b):
+        flow_mass = sum(
+            b.flow_mass_phase_comp[0, "Liq", j].value for j in ["H2O", "TDS"]
+        )
+        mass_frac_ppm = b.flow_mass_phase_comp[0, "Liq", "TDS"].value / flow_mass * 1e6
+        pressure_bar = b.pressure[0].value / 1e5
+        return {
+            "flow_mass": float(flow_mass),
+            "mass_frac_ppm": float(mass_frac_ppm),
+            "pressure_bar": float(pressure_bar)
+        }
+
+    data["Feed"] = get_stream_data(m.fs.feed.outlet)
+    
+    for stage in m.fs.Stages:
+        data[str(stage)] = {
+            "PrimaryPump": {
+                "out": get_stream_data(m.fs.PrimaryPumps[stage].outlet)
+            },
+            "RO": {
+                "permeate": get_stream_data(m.fs.ROUnits[stage].permeate),
+                "retentate": get_stream_data(m.fs.ROUnits[stage].retentate),
+                "recovery": float(m.fs.ROUnits[stage].recovery_vol_phase[0, "Liq"].value)
+            }
+        }
+        
+        if stage != m.fs.LastStage:
+            data[str(stage)]["Mixer"] = {
+                "recycle": get_stream_data(m.fs.Mixers[stage].downstream),
+                "out": get_stream_data(m.fs.Mixers[stage].outlet)
+            }
+
+        if stage != m.fs.FirstStage:
+            data[str(stage)]["BoosterPump"] = {
+                "out": get_stream_data(m.fs.BoosterPumps[stage].outlet)
+            }
+
+    data["Disposal"] = get_stream_data(m.fs.disposal.inlet)
+    data["Product"] = get_stream_data(m.fs.product.inlet)
+
+    return data
+def save_state(m, filename="state.json"):
+    import json
+    data = get_state_data(m)
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
 
 
 def display_system(m):

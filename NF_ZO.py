@@ -8,7 +8,6 @@ from pyomo.environ import (
     Block,
     Constraint,
     Objective,
-    units
 )
 import json
 import math
@@ -37,9 +36,9 @@ from idaes.core.util.scaling import (
 sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
-def nanofiltration(m, Q_in = 100):
+def nanofiltration(m):
     # Read data from 'solute_parameters.json'
-    with open("../solute_parameters.json") as f:
+    with open("solute_parameters.json") as f:
         solute_data = json.load(f)
 
     # solute list
@@ -72,10 +71,10 @@ def nanofiltration(m, Q_in = 100):
 
     # properties (cannot be fixed for initialization routines, must calculate the state variables)
     for key in solute_list:
-        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_flow']
+        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_concentration']
 
-    var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
-    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = Q_in
+    var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_concentration'] for key in solute_list}
+    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = 100
 
     m.fs.feed.properties.calculate_state(
         var_args = var_args,  # feed mass fractions [-]
@@ -119,7 +118,7 @@ def nanofiltration(m, Q_in = 100):
     # Set the scaling to be the inverse of the order of magnitude of the mass concentration
     for key in solute_list:
         m.fs.properties.set_default_scaling(
-            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_flow']), index=("Liq", key)
+            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_concentration']), index=("Liq", key)
          )
 
 
@@ -201,7 +200,6 @@ def main():
     QGESSCostingData.display_flowsheet_cost(model.fs.costing2)
 
     model.fs.unit.report()
-#    print(model.fs.unit._get_stream_table_contents())
 
 if __name__ == "__main__":
     main()
