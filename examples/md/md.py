@@ -33,6 +33,7 @@ def main(vis = False):
     # Note: MD area is already fixed to 100m2 in the flowsheet.
     m.fs.MD.area.fix(area)
     
+    # The initialization routine is tailored to 1 kg/s (uses MD specs attributes to 1 kg/s feed flow)
     MD.initialize_system(m)
     res=MD.solve(m)
     assert_optimal_termination(res)
