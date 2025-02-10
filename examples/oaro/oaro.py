@@ -41,7 +41,7 @@ def main(erd_type=ERDtype.pump_as_turbine, raise_on_failure=False):
     oaro.optimize_set_up(m)
 
     # For optimization, consider fixing system recovery rate. Will set to 50%, though low for current settings/application, consistent with MD recovery setting.
-    # m.fs.volumetric_recovery.fix(0.5)
+    m.fs.volumetric_recovery.fix(0.5)
 
     # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
     m.fs.OARO.area.unfix()
