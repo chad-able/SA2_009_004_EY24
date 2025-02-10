@@ -12,7 +12,7 @@
 #################################################################################
 
 import itertools
-
+import numpy as np
 from pyomo.environ import (
     ConcreteModel,
     value,
@@ -138,7 +138,7 @@ def run_lsrro_case(
         display_system(m)
         display_design(m)
         display_state(m)
-        save_state(m, filename = 'lsrro_state.json')
+        save_state(m, filename = f'dump_{str(number_of_stages)}_stages.json')
         display_RO_reports(m)
         QGESSCostingData.report(m.fs.prommis_costing)
         QGESSCostingData.display_flowsheet_cost(m.fs.prommis_costing)
@@ -381,10 +381,10 @@ def build(
     m.fs.costing.add_LCOW(product_flow_vol_total)
 
     denominator = pyunits.convert(product_flow_vol_total, to_units=pyunits.m**3 / pyunits.year)
-    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.prommis_costing.annualized_cost / denominator * 1e6)
+    m.fs.prommis_costing.LCOW = Expression(expr=m.fs.prommis_costing.annualized_cost / denominator * 1e6)
 
     # objective
-    m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
+    m.fs.objective = Objective(expr=m.fs.prommis_costing.LCOW)
 
     # Expressions for parameter sweep -----------------------------------------
     # Final permeate concentration as mass fraction
@@ -1291,6 +1291,10 @@ def get_state_data(m):
 
     data["Disposal"] = get_stream_data(m.fs.disposal.inlet)
     data["Product"] = get_stream_data(m.fs.product.inlet)
+    data["SEC"] = value(m.fs.costing.specific_energy_consumption)
+    data["LCOW"] = value(m.fs.prommis_costing.LCOW)
+    data["WaterTAP LCOW"] = value(m.fs.costing.LCOW)
+    data["Recovery"] = value(m.fs.water_recovery)
 
     return data
 def save_state(m, filename="state.json"):
@@ -1336,7 +1340,7 @@ def display_system(m):
     )
 
     print("Levelized cost of water: %.2f $/m3" % value(m.fs.costing.LCOW))
-    print("Levelized cost of water (PROMMIS): %.2f $/m3" % value(m.fs.costing.prommis_LCOW))
+    print("Levelized cost of water (PROMMIS): %.2f $/m3" % value(m.fs.prommis_costing.LCOW))
     print(
         f"Primary Pump Capital Cost ($/m3):"
         f"{value(m.fs.costing.capital_recovery_factor*sum(m.fs.PrimaryPumps[stage].costing.capital_cost for stage in m.fs.Stages)/ m.fs.costing.annual_water_production)}"
@@ -1372,9 +1376,10 @@ def display_RO_reports(m):
         stage.report()
 
 
+
 if __name__ == "__main__":
     m, results = run_lsrro_case(
-        number_of_stages=4,
+        number_of_stages=2,
         water_recovery=0.5,
         Cin=70,  # inlet TDS conc kg/m3,
         Qin=1e-1,  # inlet feed flowrate m3/s
@@ -1392,3 +1397,4 @@ if __name__ == "__main__":
         number_of_RO_finite_elements=10,
         set_default_bounds_on_module_dimensions=True,
     )
+
