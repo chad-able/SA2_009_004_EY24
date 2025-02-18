@@ -138,9 +138,9 @@ def run_lsrro_case(
         display_system(m)
         display_design(m)
         display_state(m)
-        save_state(m, filename = f'dump_{str(number_of_stages)}_stages.json')
+        save_state(m, filename = f'dump_{str(water_recovery)}_recov.json')
         display_RO_reports(m)
-        QGESSCostingData.report(m.fs.prommis_costing)
+        QGESSCostingData.report(m.fs.prommis_costing, export=True)
         QGESSCostingData.display_flowsheet_cost(m.fs.prommis_costing)
     else:
         print("\n***---Solve failed---***")
@@ -1314,6 +1314,7 @@ def display_system(m):
     )
     print("Feed: %.2f kg/s, %.0f ppm" % (feed_flow_mass, feed_mass_frac_TDS * 1e6))
 
+
     prod_flow_mass = sum(
         m.fs.product.flow_mass_phase_comp[0, "Liq", j].value for j in ["H2O", "TDS"]
     )
@@ -1376,11 +1377,10 @@ def display_RO_reports(m):
         stage.report()
 
 
-
 if __name__ == "__main__":
     m, results = run_lsrro_case(
-        number_of_stages=2,
-        water_recovery=0.5,
+        number_of_stages=3,
+        water_recovery=0.45,
         Cin=70,  # inlet TDS conc kg/m3,
         Qin=1e-1,  # inlet feed flowrate m3/s
         Cbrine=None,  # brine conc kg/m3
