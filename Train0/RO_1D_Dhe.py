@@ -107,7 +107,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101  # feed TDS mass fraction [-]
     m.fs.feed.properties.calculate_state(
         var_args={
-            ("flow_mass_phase_comp", ("Liq", "H2O")): 100,  # feed mass flow rate [kg/s]
+            ("flow_mass_phase_comp", ("Liq", "H2O")): 15.27,  # feed mass flow rate [kg/s]
             ("mass_frac_phase_comp", ("Liq", "TDS")): value(
                 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"])
         },  # feed TDS mass fraction [-]
@@ -115,7 +115,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     )
     m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P1.outlet.pressure[0].fix(70e5)
-    membrane_area = 12100 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
+    membrane_area = 50*15.27 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
     A = 4.2e-12
     B = 3.5e-8
     pressure_atmospheric = 101325
@@ -181,6 +181,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
     m.fs.costing2.build_process_costs(
         # arguments related to installation costs
+        cost_factor = 1.58, 
         piping_materials_and_labor_percentage=20,
         electrical_materials_and_labor_percentage=20,
         instrumentation_percentage=8,
@@ -201,15 +202,15 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
             "technician",
             "engineer",
         ],
-        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_rate=[24.81, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
         labor_burden=25,  # % fringe benefits
-        operators_per_shift=[4, 9, 2, 2, 2, 3],
+        operators_per_shift=[2, 0, 0, 0, 0, 0],
         hours_per_shift=8,
         shifts_per_day=3,
-        operating_days_per_year=336,
+        operating_days_per_year=365,
         mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
         # arguments related to total owners costs
-        land_cost=m.fs.land_cost,
+        land_cost=1,
         resources=[],
         rates=[],
         fixed_OM=True,
@@ -220,7 +221,6 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
         recovery_rate_per_year=None,
         CE_index_year="UKy_2019",
         watertap_blocks = [m.fs.RO, m.fs.P1]
-
     )
 
     denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
