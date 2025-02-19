@@ -330,6 +330,7 @@ def build(
     prommis_list.extend([m.fs.unit2, m.fs.P1])
     m.fs.prommis_costing.build_process_costs(
         # arguments related to installation costs
+        cost_factor = 1.58, 
         piping_materials_and_labor_percentage=20,
         electrical_materials_and_labor_percentage=20,
         instrumentation_percentage=8,
@@ -350,12 +351,12 @@ def build(
             "technician",
             "engineer",
         ],
-        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_rate=[24.81, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
         labor_burden=25,  # % fringe benefits
-        operators_per_shift=[4, 9, 2, 2, 2, 3],
+        operators_per_shift=[2, 0, 0, 0, 0, 0],
         hours_per_shift=8,
         shifts_per_day=3,
-        operating_days_per_year=336,
+        operating_days_per_year=365,
         mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
         # arguments related to total owners costs
         land_cost=1,
@@ -1295,6 +1296,8 @@ def get_state_data(m):
     data["LCOW"] = value(m.fs.prommis_costing.LCOW)
     data["WaterTAP LCOW"] = value(m.fs.costing.LCOW)
     data["Recovery"] = value(m.fs.water_recovery)
+    data["Fixed OM Cost"] = value(m.fs.prommis_costing.total_fixed_OM_cost)
+    data["Variable OM Cost"] = value(m.fs.prommis_costing.total_variable_OM_cost[0])
 
     return data
 def save_state(m, filename="state.json"):
@@ -1380,9 +1383,9 @@ def display_RO_reports(m):
 if __name__ == "__main__":
     m, results = run_lsrro_case(
         number_of_stages=3,
-        water_recovery=0.45,
+        water_recovery=0.4,
         Cin=70,  # inlet TDS conc kg/m3,
-        Qin=1e-1,  # inlet feed flowrate m3/s
+        Qin=15.27e-2,  # inlet feed flowrate m3/s
         Cbrine=None,  # brine conc kg/m3
         A_case=ACase.optimize,
         B_case=BCase.optimize,
