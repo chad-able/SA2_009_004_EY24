@@ -25,6 +25,7 @@ from pyomo.environ import (
 import numpy as np
 import json
 from pyomo.environ import units as pyunits
+import pandas as pd
 
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
@@ -49,6 +50,7 @@ from watertap.core.wt_database import Database
 import watertap.property_models.seawater_prop_pack as prop_SW
 import time
 import idaes.logger as idaeslog
+from NF_ZO import nanofiltration
 
 sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
@@ -63,6 +65,11 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m = ConcreteModel()
     m.fs = FlowsheetBlock(dynamic=False)
     m.fs.prop_desal = prop_SW.SeawaterParameterBlock()
+
+    # Nanofiltration
+    m2 = ConcreteModel()
+    m2.fs = FlowsheetBlock(dynamic=False)
+    nanofiltration(m2)
 
     # costing
     m.fs.costing2 = QGESSCosting()
@@ -97,7 +104,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
     # properties (cannot be fixed for initialization routines, must calculate the state variables)
 
-    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.1  # feed TDS mass fraction [-]
+    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101  # feed TDS mass fraction [-]
     m.fs.feed.properties.calculate_state(
         var_args={
             ("flow_mass_phase_comp", ("Liq", "H2O")): 100,  # feed mass flow rate [kg/s]
@@ -228,15 +235,20 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # optimize
     m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
     optimization_results = solver.solve(m)
+    nf_results = solver.solve(m2)
     assert_optimal_termination(results)
 
-    QGESSCostingData.report(m.fs.costing2)
+    QGESSCostingData.report(m.fs.costing2, export=True)
     QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
 
     #print
     m.fs.feed.report()
     m.fs.P1.report()
     m.fs.RO.report()
+    df = m.fs.RO._get_stream_table_contents()
+    pd.options.display.float_format = '{:,.10f}'.format
+    df.to_csv('stream_table_contents.csv', index=False, float_format='%.10f')
+
 
     # Dictionary for results
     results = { "SEC": value(m.fs.costing.specific_energy_consumption),
@@ -261,13 +273,13 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
         )
 
     # MUSD/year
-    print(pyunits.get_units(m.fs.costing2.annualized_cost))
     flowrate_year = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
 
     print(
         "PROMMIS LCOW: %.2f USD/ton"
         % value(m.fs.costing.LCOW)
         )
+
 
 
     if value(m.fs.P1.outlet.pressure[0]) >= 85e5:
@@ -296,24 +308,27 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
 
-def main():
+def multiple():
 
-    process_variable = "area"
-    process_value = np.arange(2000, 12000, 500)
+    process_variable = "recovery"
+    process_value = np.arange(0.2, 0.6, 0.05)
     results = {}
-
-    # visualize process
-    RO_1D_Dhe(process_variable="recovery", process_value=0.2, vis=True)
 
     for pv in process_value:
         result = RO_1D_Dhe(process_variable=process_variable, process_value=pv)
-        results[int(pv)] = result
+        if process_value == "area":
+            results[int(pv)] = result
+        else:
+            results[pv] = result
 
     # write results to json files
     with open(f'results_fixed_{process_variable}.json', 'w') as f:
         json.dump(results, f, indent=4, cls=NpEncoder)
 
+def single():
+    result = RO_1D_Dhe(process_variable='recovery', process_value=0.45)
+
 
 if __name__ == '__main__':
-    main()
+    single()
 
