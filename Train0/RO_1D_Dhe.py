@@ -67,9 +67,9 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.prop_desal = prop_SW.SeawaterParameterBlock()
 
     # Nanofiltration
-    m2 = ConcreteModel()
-    m2.fs = FlowsheetBlock(dynamic=False)
-    nanofiltration(m2)
+    # m2 = ConcreteModel()
+    # m2.fs = FlowsheetBlock(dynamic=False)
+    nanofiltration(m)
 
     # costing
     m.fs.costing2 = QGESSCosting()
@@ -78,8 +78,8 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # create units
     m.fs.feed = Feed(property_package=m.fs.prop_desal)
 
-    m.fs.P1 = Pump(property_package=m.fs.prop_desal)
-    m.fs.P1.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.P2 = Pump(property_package=m.fs.prop_desal)
+    m.fs.P2.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
     m.fs.RO = ReverseOsmosis1D(
         property_package=m.fs.prop_desal,
@@ -94,8 +94,8 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.costing.add_LCOW(m.fs.RO.mixed_permeate[0].flow_vol)
 
     # connections
-    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
-    m.fs.s02 = Arc(source=m.fs.P1.outlet, destination=m.fs.RO.inlet)
+    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P2.inlet)
+    m.fs.s02 = Arc(source=m.fs.P2.outlet, destination=m.fs.RO.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -113,8 +113,8 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
         },  # feed TDS mass fraction [-]
         hold_state=True,  # fixes the calculated component mass flow rates
     )
-    m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
-    m.fs.P1.outlet.pressure[0].fix(70e5)
+    m.fs.P2.efficiency_pump.fix(0.80)  # pump efficiency [-]
+    m.fs.P2.outlet.pressure[0].fix(70e5)
     membrane_area = 12100 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
     A = 4.2e-12
     B = 3.5e-8
@@ -130,7 +130,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.prop_desal.set_default_scaling(
         "flow_mass_phase_comp", 1e-2, index=("Liq", "TDS")
     )
-    iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
+    iscale.set_scaling_factor(m.fs.P2.control_volume.work, 1e-3)
     iscale.set_scaling_factor(m.fs.RO.area, 1e-5)
 
     iscale.calculate_scaling_factors(m)
@@ -138,7 +138,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # initialize
     m.fs.feed.initialize()
     propagate_state(m.fs.s01)
-    m.fs.P1.initialize()
+    m.fs.P2.initialize()
     propagate_state(m.fs.s02)
     m.fs.RO.initialize(outlvl=idaeslog.DEBUG)
 
@@ -149,12 +149,12 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
     #Start optimizing
     m.fs.RO.area.unfix()                  # membrane area (m^2)
-    m.fs.P1.outlet.pressure[0].unfix()     # feed pressure (Pa)
+    m.fs.P2.outlet.pressure[0].unfix()     # feed pressure (Pa)
     m.fs.RO.length.unfix()
     m.fs.RO.area.setlb(1)
     m.fs.RO.area.setub(None)
-    m.fs.P1.outlet.pressure[0].setlb(1e5)
-    m.fs.P1.outlet.pressure[0].setub(None)
+    m.fs.P2.outlet.pressure[0].setlb(1e5)
+    m.fs.P2.outlet.pressure[0].setub(85e5)
     CE_index_year = "UKy_2019"
 
     fix_variable = {
@@ -219,7 +219,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
         waste=[],
         recovery_rate_per_year=None,
         CE_index_year="UKy_2019",
-        watertap_blocks = [m.fs.RO, m.fs.P1]
+        watertap_blocks = [m.fs.RO, m.fs.P2]
 
     )
 
@@ -243,7 +243,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
     #print
     m.fs.feed.report()
-    m.fs.P1.report()
+    m.fs.P2.report()
     m.fs.RO.report()
     df = m.fs.RO._get_stream_table_contents()
     pd.options.display.float_format = '{:,.10f}'.format
@@ -256,7 +256,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
                 "Watertap LCOW": value(m.fs.costing.LCOW),
                 "Permeate Flow": value(m.fs.RO.mixed_permeate[0].flow_vol),
                 "Brine Flow": value(m.fs.RO.feed_side.properties[0, 1].flow_vol),
-                "Pump Pressure": value(m.fs.P1.outlet.pressure[0]),
+                "Pump Pressure": value(m.fs.P2.outlet.pressure[0]),
                 "Membrane Area": value(m.fs.RO.area),
                 "Recovery": value(m.fs.RO.recovery_vol_phase[0,'Liq']),
                 "Variable OM Cost": value(m.fs.costing2.total_variable_OM_cost[0]),
@@ -282,7 +282,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
 
 
-    if value(m.fs.P1.outlet.pressure[0]) >= 85e5:
+    if value(m.fs.P2.outlet.pressure[0]) >= 85e5:
         print("INFEASIBLE") #not feasible to operate conventional RO membranes above this pressure
 
     if vis:
