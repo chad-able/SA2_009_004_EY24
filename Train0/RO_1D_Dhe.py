@@ -43,7 +43,7 @@ from watertap.unit_models.reverse_osmosis_1D import (
 )
 
 import sys
-sys.path.append('/Users/nicktiwari/Documents/watertap/')
+# sys.path.append('/Users/nicktiwari/Documents/watertap/')
 from watertap.unit_models.pressure_changer import Pump
 from watertap.costing import WaterTAPCosting
 from watertap.core.wt_database import Database
@@ -52,7 +52,7 @@ import time
 import idaes.logger as idaeslog
 from NF_ZO import nanofiltration
 
-sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+# sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
 def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):

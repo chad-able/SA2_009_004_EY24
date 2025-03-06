@@ -34,10 +34,11 @@ from idaes.core.util.scaling import (
     badly_scaled_var_generator,
 )
 
-sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+# sys.path.append('/Users/Adam/my-nawi-hub/prommis/src/')
+# print(sys.path)
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
-def nanofiltration(m, Q_in = 100):
+def nanofiltration(m, Q_in = 0.014877):
     # Read data from 'solute_parameters.json'
     with open("../solute_parameters.json") as f:
         solute_data = json.load(f)
@@ -49,20 +50,21 @@ def nanofiltration(m, Q_in = 100):
 
     m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
                                                mw_data=mw_data,
-                                               charge=charge)
+                                               charge=charge,
+                                               density_calculation=props.DensityCalculation.seawater)
 
     # create units
     m.fs.feed = Feed(property_package=m.fs.properties)
-    m.fs.product = Product(property_package=m.fs.properties)
-    m.fs.disposal = Product(property_package=m.fs.properties)
+    # m.fs.product = Product(property_package=m.fs.properties)
+    # m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.unit = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
 
     # connections
-    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
-    m.fs.s02 = Arc(source=m.fs.P1.outlet, destination=m.fs.unit.inlet)
-    m.fs.s03 = Arc(source=m.fs.unit.permeate, destination=m.fs.product.inlet)
-    m.fs.s04 = Arc(source=m.fs.unit.retentate, destination=m.fs.disposal.inlet)
+    m.fs.feed_to_p1 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
+    m.fs.p1_to_nf = Arc(source=m.fs.P1.outlet, destination=m.fs.unit.inlet)
+    # m.fs.s03 = Arc(source=m.fs.unit.permeate, destination=m.fs.product.inlet)
+    # m.fs.s04 = Arc(source=m.fs.unit.retentate, destination=m.fs.disposal.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -74,13 +76,15 @@ def nanofiltration(m, Q_in = 100):
     for key in solute_list:
         m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_flow']
 
-    var_args = {("flow_mass_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
-    var_args[("flow_mass_phase_comp", ("Liq", "H2O"))] = Q_in
-
+    var_args = {("mass_frac_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
+    var_args[("flow_vol_phase", ("Liq"))] = Q_in
+    m.fs.feed.properties[0].total_dissolved_solids
     m.fs.feed.properties.calculate_state(
         var_args = var_args,  # feed mass fractions [-]
         hold_state=True,  # fixes the calculated component mass flow rates
     )
+    m.fs.feed.properties[0].assert_electroneutrality(defined_state=True,
+                                                     adjust_by_ion='Cl')
     m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P1.outlet.pressure[0].fix(10e5)
 
@@ -95,11 +99,13 @@ def nanofiltration(m, Q_in = 100):
     m.fs.unit.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
     charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
 
+    # m.fs.unit.feed_side.properties_in[0].assert_electroneutrality(defined_state=False,
+                                                                #   adjust_by_ion='Cl')
     m.fs.unit.eq_electroneutrality = Constraint(
         expr=0
         == sum(
             charge_comp[j]
-            * m.fs.unit.feed_side.properties_out[0].conc_mol_phase_comp["Liq", j]
+            * m.fs.unit.properties_permeate[0].conc_mol_phase_comp["Liq", j]
             for j in charge_comp
         )
     )
@@ -122,21 +128,24 @@ def nanofiltration(m, Q_in = 100):
             "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_flow']), index=("Liq", key)
          )
 
+    m.fs.unit.feed_side.properties_in[0].total_dissolved_solids
+    m.fs.unit.feed_side.properties_out[0].total_dissolved_solids
 
+    m.fs.unit.properties_permeate[0].total_dissolved_solids
     iscale.set_scaling_factor(m.fs.P1.control_volume.work, 1e-3)
 
     iscale.calculate_scaling_factors(m)
 
     # initialize
     m.fs.feed.initialize()
-    propagate_state(m.fs.s01)
+    propagate_state(m.fs.feed_to_p1)
     m.fs.P1.initialize()
-    propagate_state(m.fs.s02)
+    propagate_state(m.fs.p1_to_nf)
     m.fs.unit.initialize()
-    propagate_state(m.fs.s03)
-    m.fs.product.initialize()
-    propagate_state(m.fs.s04)
-    m.fs.disposal.initialize()
+    # propagate_state(m.fs.s03)
+    # m.fs.product.initialize()
+    # propagate_state(m.fs.s04)
+    # m.fs.disposal.initialize()
 
     return m
 
@@ -202,6 +211,7 @@ def main():
 
     model.fs.unit.report()
 #    print(model.fs.unit._get_stream_table_contents())
+    return model
 
 if __name__ == "__main__":
-    main()
+    m = main()
