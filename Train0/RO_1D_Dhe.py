@@ -19,9 +19,11 @@ from pyomo.environ import (
     assert_optimal_termination,
     Block,
     Objective,
-    Expression
+    Expression,
+    Constraint
+    
 )
-
+from pyomo.common.errors import InfeasibleConstraintException
 import numpy as np
 import json
 from pyomo.environ import units as pyunits
@@ -31,7 +33,7 @@ from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
 from idaes.core.solvers import get_solver
 from idaes.core.util.initialization import propagate_state
-from idaes.models.unit_models import Product, Feed
+from idaes.models.unit_models import Product, Feed, Translator
 from idaes.core import UnitModelCostingBlock
 import idaes.core.util.scaling as iscale
 from pyomo.util.check_units import assert_units_consistent
@@ -70,13 +72,12 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # m2 = ConcreteModel()
     # m2.fs = FlowsheetBlock(dynamic=False)
     nanofiltration(m)
-
     # costing
     m.fs.costing2 = QGESSCosting()
     m.fs.costing = WaterTAPCosting()
 
     # create units
-    m.fs.feed = Feed(property_package=m.fs.prop_desal)
+    # m.fs.feed = Feed(property_package=m.fs.prop_desal)
 
     m.fs.P2 = Pump(property_package=m.fs.prop_desal)
     m.fs.P2.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
@@ -93,26 +94,45 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.costing.add_specific_energy_consumption(m.fs.RO.mixed_permeate[0].flow_vol)
     m.fs.costing.add_LCOW(m.fs.RO.mixed_permeate[0].flow_vol)
 
+    translator=m.fs.mcas_to_tds_translator = Translator(inlet_property_package=m.fs.properties,
+                                            outlet_property_package=m.fs.prop_desal)
+    
+    @translator.Constraint([0])
+    def isothermal_eq(b,t):
+        return b.inlet.temperature[t] == b.outlet.temperature[t]
+    
+    @translator.Constraint([0])
+    def isobaric_eq(b,t):
+        return b.inlet.pressure[t] == b.outlet.pressure[t]
+    
+    @translator.Constraint([0])
+    def isometric_eq(b,t):
+        return b.properties_in[t].flow_vol_phase["Liq"] == b.properties_out[t].flow_vol_phase["Liq"] 
+    
+    @translator.Constraint([0])
+    def TDS_eq(b,t):
+        return pyunits.convert(b.properties_in[t].total_dissolved_solids, to_units=pyunits.kg/pyunits.m**3) == b.properties_out[t].conc_mass_phase_comp["Liq", "TDS"]
     # connections
-    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.P2.inlet)
-    m.fs.s02 = Arc(source=m.fs.P2.outlet, destination=m.fs.RO.inlet)
+    m.fs.nf_to_translator = Arc(source=m.fs.nf.permeate, destination=translator.inlet)
+    m.fs.translator_to_p2 = Arc(source=translator.outlet, destination=m.fs.P2.inlet)
+    m.fs.p2_to_ro = Arc(source=m.fs.P2.outlet, destination=m.fs.RO.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # specify flowsheet
-    m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
-    m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
-    # properties (cannot be fixed for initialization routines, must calculate the state variables)
+    # m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
+    # m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
+    # # properties (cannot be fixed for initialization routines, must calculate the state variables)
 
-    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101  # feed TDS mass fraction [-]
-    m.fs.feed.properties.calculate_state(
-        var_args={
-            ("flow_mass_phase_comp", ("Liq", "H2O")): 100,  # feed mass flow rate [kg/s]
-            ("mass_frac_phase_comp", ("Liq", "TDS")): value(
-                m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"])
-        },  # feed TDS mass fraction [-]
-        hold_state=True,  # fixes the calculated component mass flow rates
-    )
+    # m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101  # feed TDS mass fraction [-]
+    # m.fs.feed.properties.calculate_state(
+    #     var_args={
+    #         ("flow_mass_phase_comp", ("Liq", "H2O")): 100,  # feed mass flow rate [kg/s]
+    #         ("mass_frac_phase_comp", ("Liq", "TDS")): value(
+    #             m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"])
+    #     },  # feed TDS mass fraction [-]
+    #     hold_state=True,  # fixes the calculated component mass flow rates
+    # )
     m.fs.P2.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P2.outlet.pressure[0].fix(70e5)
     membrane_area = 12100 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
@@ -124,29 +144,37 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.RO.B_comp.fix(B)
     m.fs.RO.permeate.pressure[0].fix(pressure_atmospheric)
     m.fs.RO.length.fix(16)
+    m.fs.RO.flux_mass_phase_comp.setlb(None)
 
+    m.fs.nf.area.fix()
     # scaling
-    m.fs.prop_desal.set_default_scaling("flow_mass_phase_comp", 1e-3, index=("Liq", "H2O"))
-    m.fs.prop_desal.set_default_scaling(
-        "flow_mass_phase_comp", 1e-2, index=("Liq", "TDS")
-    )
+    # m.fs.prop_desal.set_default_scaling("flow_mass_phase_comp", 1e-3, index=("Liq", "H2O"))
+    # m.fs.prop_desal.set_default_scaling(
+    #     "flow_mass_phase_comp", 1e-2, index=("Liq", "TDS")
+    # )
     iscale.set_scaling_factor(m.fs.P2.control_volume.work, 1e-3)
-    iscale.set_scaling_factor(m.fs.RO.area, 1e-5)
+    iscale.set_scaling_factor(m.fs.RO.area, 1e-3)
 
     iscale.calculate_scaling_factors(m)
 
     # initialize
-    m.fs.feed.initialize()
-    propagate_state(m.fs.s01)
+    propagate_state(m.fs.nf_to_translator)
+    m.fs.mcas_to_tds_translator.initialize()
+    propagate_state(m.fs.translator_to_p2)
     m.fs.P2.initialize()
-    propagate_state(m.fs.s02)
-    m.fs.RO.initialize(outlvl=idaeslog.DEBUG)
-
+    propagate_state(m.fs.p2_to_ro)
+    # return m
+    try:
+        m.fs.RO.initialize(outlvl=idaeslog.DEBUG)
+    except:
+        # print("INFEASIBLE CONSTRAINT EXCPETION FROM FBBT")
+         
+        pass
 
     # solve model
-    solver.options['max_iter'] = 100000
+    solver.options['max_iter'] = 10000
     results = solver.solve(m, tee=True)
-
+    # return m
     #Start optimizing
     m.fs.RO.area.unfix()                  # membrane area (m^2)
     m.fs.P2.outlet.pressure[0].unfix()     # feed pressure (Pa)
@@ -154,7 +182,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.RO.area.setlb(1)
     m.fs.RO.area.setub(None)
     m.fs.P2.outlet.pressure[0].setlb(1e5)
-    m.fs.P2.outlet.pressure[0].setub(85e5)
+    m.fs.P2.outlet.pressure[0].setub(None)
     CE_index_year = "UKy_2019"
 
     fix_variable = {
@@ -235,8 +263,8 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # optimize
     m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
     optimization_results = solver.solve(m)
-    nf_results = solver.solve(m2)
-    assert_optimal_termination(results)
+    # nf_results = solver.solve(m2)
+    assert_optimal_termination(optimization_results)
 
     QGESSCostingData.report(m.fs.costing2, export=True)
     QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
@@ -330,5 +358,6 @@ def single():
 
 
 if __name__ == '__main__':
-    single()
+    # single()
+    m=RO_1D_Dhe()
 
