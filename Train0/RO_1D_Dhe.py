@@ -104,10 +104,10 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
     # properties (cannot be fixed for initialization routines, must calculate the state variables)
 
-    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101  # feed TDS mass fraction [-]
+    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"] = 0.101336  # feed TDS mass fraction [-]
     m.fs.feed.properties.calculate_state(
         var_args={
-            ("flow_mass_phase_comp", ("Liq", "H2O")): 15.27,  # feed mass flow rate [kg/s]
+            ("flow_mass_phase_comp", ("Liq", "H2O")): 15.27*(1-.101336),  # feed mass flow rate [kg/s]
             ("mass_frac_phase_comp", ("Liq", "TDS")): value(
                 m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"])
         },  # feed TDS mass fraction [-]
@@ -115,7 +115,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     )
     m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P1.outlet.pressure[0].fix(70e5)
-    membrane_area = 50*15.27 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
+    membrane_area =  5000 #membrane area = 50 * feed flow mass(kg/s) according to NF Test
     A = 4.2e-12
     B = 3.5e-8
     pressure_atmospheric = 101325
@@ -202,7 +202,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
             "technician",
             "engineer",
         ],
-        labor_rate=[24.81, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_rate=[26.08, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
         labor_burden=25,  # % fringe benefits
         operators_per_shift=[2, 0, 0, 0, 0, 0],
         hours_per_shift=8,
@@ -238,7 +238,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     nf_results = solver.solve(m2)
     assert_optimal_termination(results)
 
-    QGESSCostingData.report(m.fs.costing2, export=True)
+    QGESSCostingData.report(m.fs.costing2, export=True, id='recov_45')
     QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
 
     #print
@@ -248,6 +248,19 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     df = m.fs.RO._get_stream_table_contents()
     pd.options.display.float_format = '{:,.10f}'.format
     df.to_csv('stream_table_contents.csv', index=False, float_format='%.10f')
+
+    def get_stream_data(b):
+        flow_mass = sum(
+            b.flow_mass_phase_comp[0, "Liq", j].value for j in ["H2O", "TDS"]
+        )
+        mass_frac_ppm = b.flow_mass_phase_comp[0, "Liq", "TDS"].value / flow_mass * 1e6
+        pressure_bar = b.pressure[0].value / 1e5
+        return {
+            "flow_mass": float(flow_mass),
+            "mass_frac_ppm": float(mass_frac_ppm),
+            "pressure_bar": float(pressure_bar)
+        }
+
 
 
     # Dictionary for results
@@ -261,11 +274,15 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
                 "Recovery": value(m.fs.RO.recovery_vol_phase[0,'Liq']),
                 "Variable OM Cost": value(m.fs.costing2.total_variable_OM_cost[0]),
                 "Fixed OM Cost": value(m.fs.costing2.total_fixed_OM_cost),
+                "Stream Inlet": get_stream_data(m.fs.RO.inlet),
+                "Stream Data Permeate": get_stream_data(m.fs.RO.permeate),
+                "Stream Data Disposal": get_stream_data(m.fs.RO.retentate),
                 }
 
 
     print("Permeate flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.mixed_permeate[0].flow_vol)))
     print("Brine flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.feed_side.properties[0, 1].flow_vol)))
+    print("Total annualized plant cost:" "{:.4f}".format(value(m.fs.costing2.annualized_cost)))
 
     print(
             "Energy Consumption: %.1f kWh/m3"
@@ -316,7 +333,7 @@ def multiple():
 
     for pv in process_value:
         result = RO_1D_Dhe(process_variable=process_variable, process_value=pv)
-        if process_value == "area":
+        if process_variable == "area":
             results[int(pv)] = result
         else:
             results[pv] = result
@@ -327,8 +344,14 @@ def multiple():
 
 def single():
     result = RO_1D_Dhe(process_variable='recovery', process_value=0.45)
+    return result
 
 
 if __name__ == '__main__':
-    single()
+    results = single()
+        # write results to json files
+    process_variable = "recovery"
+    with open(f'results_fixed_{process_variable}.json', 'w') as f:
+        json.dump(results, f, indent=4, cls=NpEncoder)
+
 

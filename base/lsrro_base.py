@@ -140,7 +140,7 @@ def run_lsrro_case(
         display_state(m)
         save_state(m, filename = f'dump_{str(water_recovery)}_recov.json')
         display_RO_reports(m)
-        QGESSCostingData.report(m.fs.prommis_costing, export=True)
+        QGESSCostingData.report(m.fs.prommis_costing, export=True, id = 'recov_'+str(water_recovery))
         QGESSCostingData.display_flowsheet_cost(m.fs.prommis_costing)
     else:
         print("\n***---Solve failed---***")
@@ -1298,6 +1298,8 @@ def get_state_data(m):
     data["Recovery"] = value(m.fs.water_recovery)
     data["Fixed OM Cost"] = value(m.fs.prommis_costing.total_fixed_OM_cost)
     data["Variable OM Cost"] = value(m.fs.prommis_costing.total_variable_OM_cost[0])
+    data['Permeate Flow'] = value(m.fs.product.properties[0].flow_vol)
+    data['Annualized Cost'] = value(m.fs.prommis_costing.annualized_cost)
 
     return data
 def save_state(m, filename="state.json"):
@@ -1384,8 +1386,8 @@ if __name__ == "__main__":
     m, results = run_lsrro_case(
         number_of_stages=3,
         water_recovery=0.4,
-        Cin=70,  # inlet TDS conc kg/m3,
-        Qin=15.27e-2,  # inlet feed flowrate m3/s
+        Cin=101.336,  # inlet TDS conc kg/m3,
+        Qin=15.27e-3,  # inlet feed flowrate m3/s
         Cbrine=None,  # brine conc kg/m3
         A_case=ACase.optimize,
         B_case=BCase.optimize,
