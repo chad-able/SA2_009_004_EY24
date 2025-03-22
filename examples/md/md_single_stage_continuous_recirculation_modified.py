@@ -28,7 +28,7 @@ from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.initialization import (
     propagate_state,
 )
-from idaes.models.unit_models import Heater, Separator, Mixer, Product, Feed
+from idaes.models.unit_models import Heater, Separator, Mixer, Product, Feed, Translator
 from idaes.models.unit_models.separator import SplittingType
 from idaes.models.unit_models.mixer import MomentumMixingType
 from idaes.models.unit_models.heat_exchanger import (
@@ -93,8 +93,12 @@ def build():
     m.fs.properties_hot_ch = props_sw.SeawaterParameterBlock()
     m.fs.properties_cold_ch = props_sw.SeawaterParameterBlock()
     m.fs.properties_vapor = props_w.WaterParameterBlock()
+
+    nanofiltration(m)
+
+
     # Control volume flow blocks
-    m.fs.feed = Feed(property_package=m.fs.properties_hot_ch)
+    # m.fs.feed = Feed(property_package=m.fs.properties_hot_ch)
     m.fs.permeate = Product(property_package=m.fs.properties_cold_ch)
     m.fs.reject = Product(property_package=m.fs.properties_hot_ch)
 
@@ -205,9 +209,32 @@ def build():
     m.fs.pump_permeate = Pump(property_package=m.fs.properties_cold_ch)
     m.fs.pump_brine = Pump(property_package=m.fs.properties_hot_ch)
 
+
+    translator=m.fs.mcas_to_tds_translator = Translator(inlet_property_package=m.fs.properties,
+                                            outlet_property_package=m.fs.properties_hot_ch)
+    
+    @translator.Constraint([0])
+    def isothermal_eq(b,t):
+        return b.inlet.temperature[t] == b.outlet.temperature[t]
+    
+    @translator.Constraint([0])
+    def isobaric_eq(b,t):
+        return b.inlet.pressure[t] == b.outlet.pressure[t]
+    
+    @translator.Constraint([0])
+    def isometric_eq(b,t):
+        return b.properties_in[t].flow_vol_phase["Liq"] == b.properties_out[t].flow_vol_phase["Liq"] 
+    
+    @translator.Constraint([0])
+    def TDS_eq(b,t):
+        return pyunits.convert(b.properties_in[t].total_dissolved_solids, to_units=pyunits.kg/pyunits.m**3) == b.properties_out[t].conc_mass_phase_comp["Liq", "TDS"]
+    # connections
+    m.fs.nf_to_translator = Arc(source=m.fs.nf.permeate, destination=translator.inlet)
+    # m.fs.translator_to_p2 = Arc(source=translator.outlet, destination=m.fs.P2.inlet)
+
     # connections
     # brine (MD hot side) loop
-    m.fs.s01 = Arc(source=m.fs.feed.outlet, destination=m.fs.pump_feed.inlet)
+    m.fs.s01 = Arc(source=translator.outlet, destination=m.fs.pump_feed.inlet)
     m.fs.s02 = Arc(source=m.fs.pump_feed.outlet, destination=m.fs.mixer.feed)
     m.fs.s03 = Arc(source=m.fs.mixer.outlet, destination=m.fs.hx.cold_inlet)
     m.fs.s04 = Arc(source=m.fs.hx.cold_outlet, destination=m.fs.pump_brine.inlet)
