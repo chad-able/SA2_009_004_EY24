@@ -182,7 +182,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.RO.area.setlb(1)
     m.fs.RO.area.setub(None)
     m.fs.P2.outlet.pressure[0].setlb(1e5)
-    m.fs.P2.outlet.pressure[0].setub(None)
+    m.fs.P2.outlet.pressure[0].setub(85e5)
     CE_index_year = "UKy_2019"
 
     fix_variable = {
@@ -344,10 +344,10 @@ def multiple():
 
     for pv in process_value:
         result = RO_1D_Dhe(process_variable=process_variable, process_value=pv)
-        if process_value == "area":
-            results[int(pv)] = result
-        else:
-            results[pv] = result
+        # if process_value == "area":
+        #     results[int(pv)] = result
+        # else:
+        results[pv] = result
 
     # write results to json files
     with open(f'results_fixed_{process_variable}.json', 'w') as f:
@@ -359,5 +359,6 @@ def single():
 
 if __name__ == '__main__':
     # single()
-    m=RO_1D_Dhe()
+    multiple()
+    # m=RO_1D_Dhe()
 
