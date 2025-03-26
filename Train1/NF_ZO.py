@@ -55,16 +55,12 @@ def nanofiltration(m, Q_in = 0.014877):
 
     # create units
     m.fs.feed = Feed(property_package=m.fs.properties)
-    # m.fs.product = Product(property_package=m.fs.properties)
-    # m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.nf = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
 
     # connections
     m.fs.feed_to_p1 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
     m.fs.p1_to_nf = Arc(source=m.fs.P1.outlet, destination=m.fs.nf.inlet)
-    # m.fs.s03 = Arc(source=m.fs.nf.permeate, destination=m.fs.product.inlet)
-    # m.fs.s04 = Arc(source=m.fs.nf.retentate, destination=m.fs.disposal.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -99,8 +95,6 @@ def nanofiltration(m, Q_in = 0.014877):
     m.fs.nf.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
     charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
 
-    # m.fs.nf.feed_side.properties_in[0].assert_electroneutrality(defined_state=False,
-                                                                #   adjust_by_ion='Cl')
     m.fs.nf.eq_electroneutrality = Constraint(
         expr=0
         == sum(
@@ -142,10 +136,6 @@ def nanofiltration(m, Q_in = 0.014877):
     m.fs.P1.initialize()
     propagate_state(m.fs.p1_to_nf)
     m.fs.nf.initialize()
-    # propagate_state(m.fs.s03)
-    # m.fs.product.initialize()
-    # propagate_state(m.fs.s04)
-    # m.fs.disposal.initialize()
 
     return m
 
@@ -210,7 +200,6 @@ def main():
     QGESSCostingData.display_flowsheet_cost(model.fs.costing2)
 
     model.fs.nf.report()
-#    print(model.fs.nf._get_stream_table_contents())
     return model
 
 if __name__ == "__main__":
