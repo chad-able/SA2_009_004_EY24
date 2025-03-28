@@ -329,12 +329,6 @@ def set_operating_conditions(m):
     feed_pressure = 101325  # atmospheric
     feed_temperature = 273.15 + 25
     feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
-    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
-    #     feed_flow_mass * feed_mass_frac_TDS
-    # )
-    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
-    #     feed_flow_mass * feed_mass_frac_H2O
-    # )
 
     m.fs.feed.properties[0].pressure.fix(feed_pressure)  # Pa
     m.fs.feed.properties[0].temperature.fix(feed_temperature)  # K
@@ -424,15 +418,6 @@ def set_operating_conditions(m):
     m.fs.chiller.control_volume.properties_out[0].flow_mass_phase_comp["Liq", "H2O"] = (
         m.fs.heater.control_volume.properties_out[0].flow_mass_phase_comp["Liq", "H2O"]
     )
-
-    # check degrees of freedom
-    # if degrees_of_freedom(m) != 0:
-    #     raise RuntimeError(
-    #         "The set_operating_conditions function resulted in {} "
-    #         "degrees of freedom rather than 0. This error suggests "
-    #         "that too many or not enough variables are fixed for a "
-    #         "simulation.".format(degrees_of_freedom(m))
-    #     )
 
 
 def solve(blk, solver=None, tee=True):
