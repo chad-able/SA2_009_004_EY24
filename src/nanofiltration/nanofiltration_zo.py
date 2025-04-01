@@ -70,10 +70,9 @@ def nanofiltration(m, Q_in = 0.014877, solute_file = '../../solute_parameters.js
     m.fs.feed_nf.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 
     # properties (cannot be fixed for initialization routines, must calculate the state variables)
-    for key in solute_list:
-        m.fs.feed_nf.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_flow']
+    var_args = {("conc_mass_phase_comp", ("Liq", key)): \
+                solute_data[key]['mass_conc_mg_L']/1000 for key in solute_list} # Convert mg/L to kg/m3
 
-    var_args = {("mass_frac_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
     var_args[("flow_vol_phase", ("Liq"))] = Q_in
     m.fs.feed_nf.properties[0].total_dissolved_solids
     m.fs.feed_nf.properties.calculate_state(
@@ -120,7 +119,7 @@ def nanofiltration(m, Q_in = 0.014877, solute_file = '../../solute_parameters.js
     # Set the scaling to be the inverse of the order of magnitude of the mass concentration
     for key in solute_list:
         m.fs.properties.set_default_scaling(
-            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_flow']), index=("Liq", key)
+            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_conc_mg_L']/1000), index=("Liq", key)
          )
 
     m.fs.nf.feed_side.properties_in[0].total_dissolved_solids

@@ -23,6 +23,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from idaes.core import FlowsheetBlock
 from idaes.core.solvers import get_solver
 from idaes.core.util.initialization import propagate_state
+from idaes.core.util.tables import generate_table
 import logging
 logging.getLogger('pyomo.util.infeasible').setLevel(logging.DEBUG)
 
@@ -98,17 +99,30 @@ def vary_recovery():
         area.append(value(m.fs.MD.area))
     return recoveries, area
 
-def nf_print_permeate_concentrations(blk):
-    for comp in m.fs.properties.component_list:
-        val = value(pyunits.convert(blk.\
-                                    conc_mass_phase_comp[('Liq', comp)], to_units=pyunits.mg/pyunits.L))
-        print(f"{comp}: {val} mg/L")
+def nf_df_concentrations(m):
+
+    comps = [('conc_mass_phase_comp', ('Liq', comp)) for comp in m.fs.properties.component_list]
+
+    stream_dict = {
+        "Feed Inlet": m.fs.nf.feed_side.properties_in[0],
+        "Feed Outlet": m.fs.nf.feed_side.properties_out[0],
+        "Permeate": m.fs.nf.properties_permeate[0]        
+    }
+
+    df = generate_table(stream_dict, comps).T * 1000 # convert to mg/L
+ 
+    df.index = [f"{idx[1][1]} mass concentration (mg/L)" for idx in df.index]
+    df.drop('H2O mass concentration (mg/L)', inplace=True)
+    df = df.round(2)
+
+    return df 
 
 if __name__ == '__main__':
     m = md_flowsheet()
     #recoveries, area = vary_recovery()
-    m.fs.nf.report()
-
+    df = nf_df_concentrations(m)
+    print(df)
+    df.to_html('temp.html')
 
     # Create the plot
     # plot = create_plot(
