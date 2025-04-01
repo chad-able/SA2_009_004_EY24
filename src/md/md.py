@@ -72,7 +72,7 @@ if __name__ == "__main__":
     m.fs.overall_recovery.display()
 
     # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
-    for i in range(2,8):
+    for i in range(2,9):
         feed_flow_mass = i # kg/s
         m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
             feed_flow_mass * feed_mass_frac_TDS
@@ -83,6 +83,7 @@ if __name__ == "__main__":
         )
         res = MD.solve(m, tee=False)
         print(f"FLOWRATE = {i}")
+
 
         if check_optimal_termination(res):
             # m.fs.MD.report()

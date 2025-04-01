@@ -1,0 +1,7 @@
+pyproject.toml
+src/SA2_009_004_EY24.egg-info/PKG-INFO
+src/SA2_009_004_EY24.egg-info/SOURCES.txt
+src/SA2_009_004_EY24.egg-info/dependency_links.txt
+src/SA2_009_004_EY24.egg-info/top_level.txt
+src/translator/test_translator.py
+src/translator/translator.py

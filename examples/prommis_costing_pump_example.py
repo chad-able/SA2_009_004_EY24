@@ -99,7 +99,7 @@ def cost_pump_example():
         resources=[],
         rates=[],
         fixed_OM=True,
-        variable_OM=False,
+        variable_OM=True,
         feed_input=None,
         efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
         waste=[],
@@ -138,7 +138,7 @@ def display_costing(m):
 
 if __name__ == "__main__":
     m = cost_pump_example()
-    display_costing(m)
+    # display_costing(m)
     # ```
 
 # This code:
