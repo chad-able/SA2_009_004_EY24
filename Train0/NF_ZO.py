@@ -40,17 +40,18 @@ from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
 def nanofiltration(m, Q_in = 0.014877):
     # Read data from 'solute_parameters.json'
-    with open("../solute_parameters.json") as f:
+    with open(r"C:\Users\Adam\my-nawi-hub\SA2_009_004_EY24\solute_parameters.json") as f:
         solute_data = json.load(f)
 
     # solute list
     solute_list = list(solute_data.keys())
     mw_data = {key: solute_data[key]['mw'] for key in solute_list}
     charge = {key: solute_data[key]['charge'] for key in solute_list}
-
+    diffusivity = {("Liq",key): 1e-9 for key in solute_list}
     m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
                                                mw_data=mw_data,
                                                charge=charge,
+                                               diffusivity_data=diffusivity,
                                                density_calculation=props.DensityCalculation.seawater,
                                                material_flow_basis=props.MaterialFlowBasis.mass)
 

@@ -146,7 +146,9 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     m.fs.RO.length.fix(16)
     m.fs.RO.flux_mass_phase_comp.setlb(None)
 
-    m.fs.nf.area.fix()
+    m.fs.nf.flux_vol_solvent.fix(1.446759259259259e-5)
+
+    # m.fs.nf.area.fix()
     # scaling
     # m.fs.prop_desal.set_default_scaling("flow_mass_phase_comp", 1e-3, index=("Liq", "H2O"))
     # m.fs.prop_desal.set_default_scaling(

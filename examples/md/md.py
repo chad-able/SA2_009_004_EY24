@@ -68,26 +68,52 @@ if __name__ == "__main__":
     MD.solve(m)
     m.fs.MD.report()
 
+    # assert False
     # Notably, system-level recovery rate of water is set to 50%. I think the 5 kg/s case couldn't solve because more membrane area would be needed to achieve 50% recovery.
     m.fs.overall_recovery.display()
 
-    # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
-    for i in range(2,6):
-        feed_flow_mass = i # kg/s
-        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
-            feed_flow_mass * feed_mass_frac_TDS
-        )
-        feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
-        m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
-            feed_flow_mass * feed_mass_frac_H2O
-        )
-        res = MD.solve(m, tee=False)
-        print(f"FLOWRATE = {i}")
-
-
+    m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
+    m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
+    res = MD.solve(m, tee=False)
+    if check_optimal_termination(res):
+        # m.fs.MD.report()
+        m.fs.MD.area.display()
+    else:
+        print("SOLVE FAILED")
+        infeas.print_infeasible_constraints(m)
+    recovery_range= np.linspace(0.05,.95,100)
+    solve_status = np.zeros(len(recovery_range))
+    for ind, i in enumerate(recovery_range):
+        m.fs.overall_recovery.fix(i)
+        print(f"FIXED RECOVERY TO {i}")
+        res = MD.solve(m, tee=True)
         if check_optimal_termination(res):
             # m.fs.MD.report()
             m.fs.MD.area.display()
+            solve_status[ind] = 1
         else:
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
+    
+    
+    print(f"solve status:\n{solve_status}")
+    # # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
+    # for i in range(2,6):
+    #     feed_flow_mass = i # kg/s
+    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
+    #         feed_flow_mass * feed_mass_frac_TDS
+    #     )
+    #     feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
+    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
+    #         feed_flow_mass * feed_mass_frac_H2O
+    #     )
+    #     res = MD.solve(m, tee=False)
+    #     print(f"FLOWRATE = {i}")
+
+
+    #     if check_optimal_termination(res):
+    #         # m.fs.MD.report()
+    #         m.fs.MD.area.display()
+    #     else:
+    #         print("SOLVE FAILED")
+    #         infeas.print_infeasible_constraints(m)

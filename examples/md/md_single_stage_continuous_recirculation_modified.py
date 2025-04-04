@@ -20,6 +20,7 @@ from pyomo.environ import (
     TransformationFactory,
     units as pyunits,
     check_optimal_termination,
+    assert_optimal_termination
 )
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
@@ -61,24 +62,41 @@ from watertap.core.util.initialization import (
     assert_degrees_of_freedom,
     interval_initializer,
 )
-from Train0.NF_ZO import nanofiltration
+from NF_ZO import nanofiltration
+from idaes.core.util.exceptions import InitializationError
+from idaes.core.util.model_diagnostics import DiagnosticsToolbox 
 
 
 def main():
     solver = get_solver()
+    # try:
     m = build()
     set_operating_conditions(m)
+    # try:
     initialize_system(m, solver=solver)
+    
+    # except InitializationError:
+    #     # return m
+    #     pass
 
-    optimize_set_up(m)
-
+    # try:
+        # optimize_set_up(m)
+  
     interval_initializer(m)
-    solve(m, solver=solver)
-
+    res = solve(m, solver=solver)
+    if not check_optimal_termination(res):
+        dt = DiagnosticsToolbox(m)
+        dt.report_structural_issues()
+        dt.report_numerical_issues()
+        dt.display_constraints_with_large_residuals()
+        dt.compute_infeasibility_explanation()
+        m.fs.report()
+    # except:
+    #     return m
     print("\n***---optimization results---***")
-    display_system(m)
-    display_design(m)
-    display_state(m)
+    # display_system(m)
+    # display_design(m)
+    # display_state(m)
 
     return m
 
@@ -190,7 +208,7 @@ def build():
         doc="System Water Recovery",
     )
     m.fs.eq_recycle_ratio = Constraint(
-        expr=sum(m.fs.feed.flow_mass_phase_comp[0, "Liq", j] for j in ["H2O", "TDS"])
+        expr=sum(m.fs.feed.flow_mass_phase_comp[0, "Liq", j] for j in m.fs.properties.component_list)
         * m.fs.recycle_ratio[0]
         == sum(
             m.fs.separator_concentrate.recycle.flow_mass_phase_comp[0, "Liq", j]
@@ -289,8 +307,8 @@ def build():
     iscale.set_scaling_factor(m.fs.pump_permeate.control_volume.work, 1e-3)
     iscale.set_scaling_factor(m.fs.pump_brine.control_volume.work, 1e-3)
     iscale.set_scaling_factor(m.fs.pump_feed.control_volume.work, 1e-3)
-    m.fs.feed.properties[0].flow_vol_phase["Liq"]
-    m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"]
+    # m.fs.feed.properties[0].flow_vol_phase["Liq"]
+    # m.fs.feed.properties[0].mass_frac_phase_comp["Liq", "TDS"]
 
     iscale.set_scaling_factor(m.fs.hx.hot.heat, 1e-3)
     iscale.set_scaling_factor(m.fs.hx.cold.heat, 1e-3)
@@ -348,20 +366,20 @@ def set_operating_conditions(m):
     # overall recovery
     m.fs.overall_recovery.fix(0.5)
     # feed
-    feed_flow_mass = 1
+    feed_flow_mass = 1*6
     feed_mass_frac_TDS = 0.035
     feed_pressure = 101325  # atmospheric
     feed_temperature = 273.15 + 25
     feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
-    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
-        feed_flow_mass * feed_mass_frac_TDS
-    )
-    m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
-        feed_flow_mass * feed_mass_frac_H2O
-    )
+    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
+    #     feed_flow_mass * feed_mass_frac_TDS
+    # )
+    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
+    #     feed_flow_mass * feed_mass_frac_H2O
+    # )
 
-    m.fs.feed.properties[0].pressure.fix(feed_pressure)  # Pa
-    m.fs.feed.properties[0].temperature.fix(feed_temperature)  # K
+    # m.fs.feed.properties[0].pressure.fix(feed_pressure)  # Pa
+    # m.fs.feed.properties[0].temperature.fix(feed_temperature)  # K
 
     # concentrate separator
     # either the overall recovery or the split fraction will be fixed, but not both
@@ -392,7 +410,7 @@ def set_operating_conditions(m):
 
     # feed pump
     m.fs.pump_feed.efficiency_pump.fix(0.8)
-    m.fs.pump_feed.control_volume.deltaP[0].fix(7e5)  # Pa
+    m.fs.pump_feed.outlet.pressure[0].fix(7e5)  # Pa
 
     # brine pump
     LEP = 7e5
@@ -450,13 +468,13 @@ def set_operating_conditions(m):
     )
 
     # check degrees of freedom
-    if degrees_of_freedom(m) != 0:
-        raise RuntimeError(
-            "The set_operating_conditions function resulted in {} "
-            "degrees of freedom rather than 0. This error suggests "
-            "that too many or not enough variables are fixed for a "
-            "simulation.".format(degrees_of_freedom(m))
-        )
+    # if degrees_of_freedom(m) != 0:
+    #     raise RuntimeError(
+    #         "The set_operating_conditions function resulted in {} "
+    #         "degrees of freedom rather than 0. This error suggests "
+    #         "that too many or not enough variables are fixed for a "
+    #         "simulation.".format(degrees_of_freedom(m))
+    #     )
 
 
 def solve(blk, solver=None, tee=True):
@@ -473,7 +491,10 @@ def initialize_system(m, solver=None, verbose=True):
         solver = get_solver()
 
     # initialize feed block
-    m.fs.feed.initialize()
+    # m.fs.feed.initialize()
+    propagate_state(m.fs.nf_to_translator)
+    m.fs.mcas_to_tds_translator.initialize()
+    # propagate_state(m.fs.s01)
 
     # with fixed chiller and heater outlet temperature, and initial guess for the flowrates, MD is initialized
     propagate_state(m.fs.s06)
@@ -561,7 +582,11 @@ def optimize_set_up(m):
     m.fs.eq_liquid_entry_pressure = Constraint(
         expr=m.fs.MD.hot_ch_inlet.pressure[0] <= LEP
     )
+    
 
+    m.fs.MD.area.setub(None)
+    m.fs.MD.length.setub(None)
+    m.fs.MD.width.setub(None)
     assert_degrees_of_freedom(m, 6)
 
 
@@ -691,4 +716,7 @@ def display_state(m):
 
 
 if __name__ == "__main__":
+    # try:
     m = main()
+    # except:
+    #     pass

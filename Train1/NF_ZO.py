@@ -76,7 +76,8 @@ def nanofiltration(m, Q_in = 0.014877):
     for key in solute_list:
         m.fs.feed.properties[0].flow_mass_phase_comp["Liq", key] = solute_data[key]['mass_flow']
 
-    var_args = {("mass_frac_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
+    var_args = {("mass_frac_phase_comp", ("Liq", key)): 99.304/98.85*solute_data[key]['mass_flow'] for key in solute_list}
+    # var_args = {("total_dissolved_solids", (None)): 99304}
     var_args[("flow_vol_phase", ("Liq"))] = Q_in
     m.fs.feed.properties[0].total_dissolved_solids
     m.fs.feed.properties.calculate_state(
