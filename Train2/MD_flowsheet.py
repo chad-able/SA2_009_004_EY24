@@ -12,6 +12,7 @@ from pyomo.environ import (
 )
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from nanofiltration.nanofiltration_zo import nanofiltration
 from translator.translator import MCAStoSeawaterTranslator
@@ -20,7 +21,7 @@ from helpers.helpers import visualize_flowsheet
 from pyomo.network import Arc
 from pyomo.util.infeasible import log_infeasible_constraints
 
-from idaes.core import FlowsheetBlock
+from idaes.core import FlowsheetBlock, UnitModelCostingBlock
 from idaes.core.solvers import get_solver
 from idaes.core.util.initialization import propagate_state
 from idaes.core.util.tables import generate_table
@@ -29,7 +30,11 @@ logging.getLogger('pyomo.util.infeasible').setLevel(logging.DEBUG)
 
 from md import MD_single_stage_continuous_recirculation as MD
 from watertap.core.util.initialization import check_dof
+from watertap.costing import WaterTAPCosting
 from helpers.helpers import create_plot
+
+sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
 def md_flowsheet(recovery=0.08):
 
@@ -85,10 +90,66 @@ def md_flowsheet(recovery=0.08):
     m.fs.MD.length.setub(None)
     m.fs.MD.width.setub(None)
 
+#    denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+#    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.costing2.annualized_cost / denominator * 1e6)
+
+    # Costing blocks
+    m.fs.costing2 = QGESSCosting()
+
+    m.fs.land_cost = 1
+
+    m.fs.costing2.build_process_costs(
+        # arguments related to installation costs
+        piping_materials_and_labor_percentage=20,
+        electrical_materials_and_labor_percentage=20,
+        instrumentation_percentage=8,
+        plants_services_percentage=10,
+        process_buildings_percentage=40,
+        auxiliary_buildings_percentage=15,
+        site_improvements_percentage=10,
+        equipment_installation_percentage=17,
+        field_expenses_percentage=12,
+        project_management_and_construction_percentage=30,
+        process_contingency_percentage=15,
+        # argument related to Fixed OM costs
+        labor_types=[
+            "skilled",
+            "unskilled",
+            "supervisor",
+            "maintenance",
+            "technician",
+            "engineer",
+        ],
+        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_burden=25,  # % fringe benefits
+        operators_per_shift=[4, 9, 2, 2, 2, 3],
+        hours_per_shift=8,
+        shifts_per_day=3,
+        operating_days_per_year=336,
+        mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
+        # arguments related to total owners costs
+        land_cost=m.fs.land_cost,
+        resources=[],
+        rates=[],
+        fixed_OM=True,
+        variable_OM=True,
+        feed_input=None,
+        efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
+        waste=[],
+        recovery_rate_per_year=None,
+        CE_index_year="UKy_2019",
+        watertap_blocks = [m.fs.MD, m.fs.nf, m.fs.P1, m.fs.hx, m.fs.heater, m.fs.mixer, m.fs.pump_feed, m.fs.pump_brine, m.fs.pump_permeate]
+
+    )
+
+    QGESSCostingData.costing_initialization(m.fs.costing2)
+    QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
+
     # Solve
     MD.optimize_set_up(m)
     MD.interval_initializer(m)
     MD.solve(m)
+
     return m
 
 def vary_recovery():

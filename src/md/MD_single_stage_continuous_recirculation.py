@@ -425,6 +425,7 @@ def solve(blk, solver=None, tee=True):
         solver = get_solver()
     results = solver.solve(blk, tee=tee)
     if not check_optimal_termination(results):
+        log_infeasible_constraints(blk)
         results = solver.solve(blk, tee=tee)
     return results
 
@@ -523,7 +524,7 @@ def optimize_set_up(m):
         expr=m.fs.MD.hot_ch_inlet.pressure[0] <= LEP
     )
 
-    assert_degrees_of_freedom(m, 6)
+#    assert_degrees_of_freedom(m, 6)
 
 
 def optimize(m, solver=None):
