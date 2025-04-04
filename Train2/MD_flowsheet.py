@@ -90,16 +90,14 @@ def md_flowsheet(recovery=0.08):
     m.fs.MD.length.setub(None)
     m.fs.MD.width.setub(None)
 
-#    denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
-#    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.costing2.annualized_cost / denominator * 1e6)
-
     # Costing blocks
-    m.fs.costing2 = QGESSCosting()
+    m.fs.prommis_costing = QGESSCosting()
 
     m.fs.land_cost = 1
 
-    m.fs.costing2.build_process_costs(
+    m.fs.prommis_costing.build_process_costs(
         # arguments related to installation costs
+        cost_factor = 1.58, 
         piping_materials_and_labor_percentage=20,
         electrical_materials_and_labor_percentage=20,
         instrumentation_percentage=8,
@@ -120,15 +118,15 @@ def md_flowsheet(recovery=0.08):
             "technician",
             "engineer",
         ],
-        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+        labor_rate=[26.08, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
         labor_burden=25,  # % fringe benefits
-        operators_per_shift=[4, 9, 2, 2, 2, 3],
+        operators_per_shift=[2, 0, 0, 0, 0, 0],
         hours_per_shift=8,
         shifts_per_day=3,
-        operating_days_per_year=336,
+        operating_days_per_year=365,
         mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
         # arguments related to total owners costs
-        land_cost=m.fs.land_cost,
+        land_cost=1,
         resources=[],
         rates=[],
         fixed_OM=True,
@@ -138,12 +136,19 @@ def md_flowsheet(recovery=0.08):
         waste=[],
         recovery_rate_per_year=None,
         CE_index_year="UKy_2019",
-        watertap_blocks = [m.fs.MD, m.fs.nf, m.fs.P1, m.fs.hx, m.fs.heater, m.fs.mixer, m.fs.pump_feed, m.fs.pump_brine, m.fs.pump_permeate]
+        watertap_blocks = [m.fs.MD, m.fs.nf, m.fs.P1, m.fs.hx, m.fs.heater
+                           , m.fs.mixer, m.fs.pump_feed, m.fs.pump_brine
+                           , m.fs.pump_permeate]
 
     )
 
-    QGESSCostingData.costing_initialization(m.fs.costing2)
-    QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
+
+    denominator = pyunits.convert(m.fs.permeate.properties[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.prommis_costing.annualized_cost / denominator * 1e6)
+
+    QGESSCostingData.costing_initialization(m.fs.prommis_costing)
+    QGESSCostingData.initialize_fixed_OM_costs(m.fs.prommis_costing)
+    m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
 
     # Solve
     MD.optimize_set_up(m)

@@ -266,7 +266,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # nf_results = solver.solve(m2)
     assert_optimal_termination(optimization_results)
 
-    QGESSCostingData.report(m.fs.costing2, export=True)
+    QGESSCostingData.report(m.fs.costing2)
     QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
 
     #print
