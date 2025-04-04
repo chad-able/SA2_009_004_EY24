@@ -5,7 +5,14 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import units as pyunits
+from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination
+from watertap.core.util.model_diagnostics import infeasible as infeas
+
+# Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
+# Modifications by Adam Atia on 2/7/2025
+# Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
+# Takeaway: Membrane area should be adjusted with flowrate.
+
 
 area = 100
 def main(vis = False):
@@ -23,9 +30,13 @@ def main(vis = False):
         feed_flow_mass * feed_mass_frac_H2O
     )
 
-    MD.initialize_system(m)
+    # Note: MD area is already fixed to 100m2 in the flowsheet.
     m.fs.MD.area.fix(area)
-    MD.solve(m)
+    
+    # The initialization routine is tailored to 1 kg/s (uses MD specs attributes to 1 kg/s feed flow)
+    MD.initialize_system(m)
+    res=MD.solve(m)
+    assert_optimal_termination(res)
     m.fs.MD.report()
 
     if vis:
@@ -36,8 +47,73 @@ def main(vis = False):
                 time.sleep(1)
         except KeyboardInterrupt:
             print("Program stopped")
+    
+    return m
 
 if __name__ == "__main__":
-    main()
+    m = main()
+    feed_mass_frac_TDS = 0.035
+    feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
+
+    # Let's see what the cost-optimal length, width, and area would be for increased flowrates.
+    MD.optimize_set_up(m)
+
+    # I noticed that area will hit the upper bound of 150m set in the flowsheet. Removing upper bounds.
+    m.fs.MD.area.setub(None)
+    m.fs.MD.length.setub(None)
+    m.fs.MD.width.setub(None)
+
+    # For safe measure--invoking interval initializer before solving
+    MD.interval_initializer(m)
+    MD.solve(m)
+    m.fs.MD.report()
+
+    # assert False
+    # Notably, system-level recovery rate of water is set to 50%. I think the 5 kg/s case couldn't solve because more membrane area would be needed to achieve 50% recovery.
+    m.fs.overall_recovery.display()
+
+    m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
+    m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
+    res = MD.solve(m, tee=False)
+    if check_optimal_termination(res):
+        # m.fs.MD.report()
+        m.fs.MD.area.display()
+    else:
+        print("SOLVE FAILED")
+        infeas.print_infeasible_constraints(m)
+    recovery_range= np.linspace(0.05,.95,100)
+    solve_status = np.zeros(len(recovery_range))
+    for ind, i in enumerate(recovery_range):
+        m.fs.overall_recovery.fix(i)
+        print(f"FIXED RECOVERY TO {i}")
+        res = MD.solve(m, tee=True)
+        if check_optimal_termination(res):
+            # m.fs.MD.report()
+            m.fs.MD.area.display()
+            solve_status[ind] = 1
+        else:
+            print("SOLVE FAILED")
+            infeas.print_infeasible_constraints(m)
+    
+    
+    print(f"solve status:\n{solve_status}")
+    # # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
+    # for i in range(2,6):
+    #     feed_flow_mass = i # kg/s
+    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "TDS"].fix(
+    #         feed_flow_mass * feed_mass_frac_TDS
+    #     )
+    #     feed_mass_frac_H2O = 1 - feed_mass_frac_TDS
+    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
+    #         feed_flow_mass * feed_mass_frac_H2O
+    #     )
+    #     res = MD.solve(m, tee=False)
+    #     print(f"FLOWRATE = {i}")
 
 
+    #     if check_optimal_termination(res):
+    #         # m.fs.MD.report()
+    #         m.fs.MD.area.display()
+    #     else:
+    #         print("SOLVE FAILED")
+    #         infeas.print_infeasible_constraints(m)
