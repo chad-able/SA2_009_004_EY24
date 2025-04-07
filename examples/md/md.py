@@ -72,6 +72,7 @@ if __name__ == "__main__":
     # Notably, system-level recovery rate of water is set to 50%. I think the 5 kg/s case couldn't solve because more membrane area would be needed to achieve 50% recovery.
     m.fs.overall_recovery.display()
 
+    # NF Permeate conditions
     m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
     m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
     res = MD.solve(m, tee=False)
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     else:
         print("SOLVE FAILED")
         infeas.print_infeasible_constraints(m)
-    recovery_range= np.linspace(0.05,.95,100)
+    recovery_range= 0.5, #np.linspace(0.05,.95,100)
     solve_status = np.zeros(len(recovery_range))
     for ind, i in enumerate(recovery_range):
         m.fs.overall_recovery.fix(i)

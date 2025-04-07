@@ -325,7 +325,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
             print("Program stopped")
 
 
-    return results
+    return results, m
 
 # Encoder to convert numpy objects for json serialization
 class NpEncoder(json.JSONEncoder):
