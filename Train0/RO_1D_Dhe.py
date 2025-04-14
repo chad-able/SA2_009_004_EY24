@@ -361,6 +361,50 @@ def single():
 
 if __name__ == '__main__':
     # single()
-    multiple()
-    # m=RO_1D_Dhe()
+    # multiple()
+    _, m=RO_1D_Dhe(process_variable='recovery', process_value=0.1)
 
+    
+    # Set upper bound for permeate concentration to 2000 mg/L (i.e., 2 kg/m3)
+    m.fs.RO.mixed_permeate[0].conc_mass_phase_comp["Liq", "TDS"].setub(2)
+
+    # Unfix RO volumetric recovery and solve for it instead
+    m.fs.RO.recovery_vol_phase.unfix()
+
+    # Solve again
+    solver = get_solver()
+    solver.solve(m, tee=True)
+    
+
+    m.fs.RO.report()
+
+    # Reprint some results:
+    # Dictionary for results
+    results = { "SEC": value(m.fs.costing.specific_energy_consumption),
+                "LCOW": value(m.fs.costing.prommis_LCOW),
+                "Watertap LCOW": value(m.fs.costing.LCOW),
+                "Permeate Flow": value(m.fs.RO.mixed_permeate[0].flow_vol),
+                "Brine Flow": value(m.fs.RO.feed_side.properties[0, 1].flow_vol),
+                "Pump Pressure": value(m.fs.P2.outlet.pressure[0]),
+                "Membrane Area": value(m.fs.RO.area),
+                "Recovery": value(m.fs.RO.recovery_vol_phase[0,'Liq']),
+                "Variable OM Cost": value(m.fs.costing2.total_variable_OM_cost[0]),
+                "Fixed OM Cost": value(m.fs.costing2.total_fixed_OM_cost),
+                }
+
+
+    print("Permeate flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.mixed_permeate[0].flow_vol)))
+    print("Brine flow (m3/s): " + "{:.4f}".format(value(m.fs.RO.feed_side.properties[0, 1].flow_vol)))
+
+    print(
+            "Energy Consumption: %.1f kWh/m3"
+            % value(m.fs.costing.specific_energy_consumption)
+        )
+
+    # MUSD/year
+    flowrate_year = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+
+    print(
+        "PROMMIS LCOW: %.2f USD/ton"
+        % value(m.fs.costing.LCOW)
+        )
