@@ -34,13 +34,16 @@ from idaes.core.util.scaling import (
     badly_scaled_var_generator,
 )
 
-# sys.path.append('/Users/Adam/my-nawi-hub/prommis/src/')
-# print(sys.path)
+from watertap.costing import WaterTAPCosting
+
+sys.path.append('E:/codes/SA2_009_004_EY24')
+sys.path.append('E:/codes/SA2_009_004_EY24/prommis/src')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
+from prommis_costing import QGESS_costing
 
 def nanofiltration(m, Q_in = 0.014877):
     # Read data from 'solute_parameters.json'
-    with open(r"C:\Users\Adam\my-nawi-hub\SA2_009_004_EY24\solute_parameters.json") as f:
+    with open(r"E:/codes/SA2_009_004_EY24/solute_parameters.json") as f:
         solute_data = json.load(f)
 
     # solute list
@@ -57,16 +60,16 @@ def nanofiltration(m, Q_in = 0.014877):
 
     # create units
     m.fs.feed = Feed(property_package=m.fs.properties)
-    # m.fs.product = Product(property_package=m.fs.properties)
-    # m.fs.disposal = Product(property_package=m.fs.properties)
+    m.fs.product = Product(property_package=m.fs.properties)
+    m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.nf = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
 
     # connections
     m.fs.feed_to_p1 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
     m.fs.p1_to_nf = Arc(source=m.fs.P1.outlet, destination=m.fs.nf.inlet)
-    # m.fs.s03 = Arc(source=m.fs.nf.permeate, destination=m.fs.product.inlet)
-    # m.fs.s04 = Arc(source=m.fs.nf.retentate, destination=m.fs.disposal.inlet)
+    m.fs.s03 = Arc(source=m.fs.nf.permeate, destination=m.fs.product.inlet)
+    m.fs.s04 = Arc(source=m.fs.nf.retentate, destination=m.fs.disposal.inlet)
 
     TransformationFactory("network.expand_arcs").apply_to(m)
 
@@ -200,19 +203,35 @@ def qgess_costing(m):
     QGESSCostingData.costing_initialization(m.fs.costing2)
     QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
 
+def QGESS_costs(m):
+    m.fs.costing = WaterTAPCosting()
+    m.fs.nf.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.P1.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.costing.cost_process()
+    m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.base_currency = units.USD_2023
+    watertap_blocks = [m.fs.nf, m.fs.P1]
+    m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=units.convert(m.fs.product.properties[0].flow_vol, to_units=units.m ** 3 / units.hr))
+
+    return m
 
 def main():
     model = ConcreteModel()
     model.fs = FlowsheetBlock(dynamic=False)
     nanofiltration(model)
-    # qgess_costing(model)
+    QGESS_costs(model)
     solver = get_solver()
     solver.solve(model)
+
+
     # QGESSCostingData.report(model.fs.costing2)
     # QGESSCostingData.display_flowsheet_cost(model.fs.costing2)
 
     model.fs.nf.report()
 #    print(model.fs.nf._get_stream_table_contents())
+    print(value(model.fs.costing.QGESS_LCOW))
     return model
 
 if __name__ == "__main__":
