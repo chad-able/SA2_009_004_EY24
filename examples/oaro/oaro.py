@@ -5,10 +5,12 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination
+from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination, Objective, Var
 from watertap.core.solvers import get_solver
 from idaes.core.util.misc import StrEnum
 from watertap.core.util.model_diagnostics import infeasible as infeas
+from prommis_costing import QGESS_costing
+
 
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/oaro/oaro.py
 # Modifications by Adam Atia on 2/7/2025
@@ -20,12 +22,13 @@ from watertap.core.util.model_diagnostics import infeasible as infeas
 class ERDtype(StrEnum):
     pump_as_turbine = "pump_as_turbine"
 
+
 if __name__ == "__main__":
-    solver= get_solver()
-    m = oaro.main(number_of_stages=4, system_recovery=0.5, erd_type=ERDtype.pump_as_turbine)
-    
-    
-     # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
+    solver = get_solver()
+    num_stages = 4
+    m = oaro.main(number_of_stages=num_stages, system_recovery=0.5, erd_type=ERDtype.pump_as_turbine)
+    watertap_blocks2 = []
+    # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
     for stage in m.fs.NonFinalStages:
         m.fs.OAROUnits[stage].area.unfix()
         m.fs.OAROUnits[stage].area.setub(None)
@@ -33,18 +36,25 @@ if __name__ == "__main__":
         m.fs.OAROUnits[stage].width.setub(None)
 
         # Unfix OARO feed velocity
-        m.fs.OAROUnits[stage].feed_side.velocity[0,0].unfix()
+        m.fs.OAROUnits[stage].feed_side.velocity[0, 0].unfix()
+        watertap_blocks2.append(m.fs.OAROUnits[stage])
+        watertap_blocks2.append(m.fs.PrimaryPumps[stage])
+        if stage > 1:
+            watertap_blocks2.append(m.fs.RecyclePumps[stage])
+        watertap_blocks2.append(m.fs.EnergyRecoveryDevices[stage])
 
     # Removing upper bounds on RO module dimensions, but more importantly, unfixing RO module width!
     m.fs.RO.width.unfix()
     m.fs.RO.area.setub(None)
     m.fs.RO.width.setub(None)
     m.fs.RO.length.setub(None)
+    watertap_blocks2.append(m.fs.RO)
+    watertap_blocks2.append(m.fs.PrimaryPumps[num_stages-1])
+    watertap_blocks2.append(m.fs.EnergyRecoveryDevices[num_stages-1])
 
-    
 
-    m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
-    m.fs.feed.flow_mass_phase_comp[0,"Liq","NaCl"].fix(0.64491)
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].fix(7.2258)
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].fix(0.64491)
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
 
@@ -52,6 +62,15 @@ if __name__ == "__main__":
     m.fs.water_recovery.fix(0.5)
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
+    m = QGESS_costing(m=m, units=watertap_blocks2, water_flow_rate=pyunits.convert(m.fs.product.properties[0].flow_vol,
+                                                                                   to_units=pyunits.m ** 3 / pyunits.hr))
+    m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
+    res = solver.solve(m, tee=True)
+    assert_optimal_termination(res)
+    m.fs.costing.QGESS_LCOW.display()
+    # for v in m.component_objects(Var, descend_into=True):
+    #     print("FOUND VAR:" + v.name)
+    #     v.pprint()
     # m = main()
     # feed_mass_frac_NaCl = 0.03
     # feed_mass_frac_H2O = 1 - feed_mass_frac_NaCl
@@ -80,7 +99,6 @@ if __name__ == "__main__":
     #     feed_flow_mass * feed_mass_frac_H2O
     # )
     # res = oaro.solve(m, tee=True)
-
 
     # # NF Permeate conditions
     # m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)

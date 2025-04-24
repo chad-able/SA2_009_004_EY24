@@ -65,7 +65,7 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
         'liq_waste_disposal_cost': 1.5, # $/bbl
         'has_solid_waste': False,
         'sol_waste_disposal_cost': 1, # $/ton
-
+        'electricity_cost': 8.09/100,
 
         # Product and efficiency parameters (currently not used)
         'mixed_product_sale_price_realization_factor': 0.65,
@@ -88,6 +88,7 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
         total_equip_cost = total_equip_cost + unit.costing.capital_cost
 
     m.fs.costing.total_equip_cost = total_equip_cost
+    m.fs.costing.electricity_cost.fix(cost_parameters['electricity_cost'])
     m = QGESS_cap_cost(m, **cost_parameters)
     m = QGESS_op_cost(m, liq_waste, sol_waste, **cost_parameters)
 
@@ -196,7 +197,7 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
         'liq_waste_disposal_cost': 1.5, # $/bbl
         'has_solid_waste': False,
         'sol_waste_disposal_cost': 1, # $/ton
-
+        'electricity_cost': 8.09 / 100,
 
         # Product and efficiency parameters (currently not used)
         'mixed_product_sale_price_realization_factor': 0.65,
@@ -246,6 +247,7 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
     #Note that solid masses are taken from OLI (not calculated in WaterTAP)
     m.fs.costing.VOP_resource_cost = Expression(
         expr=(m.fs.costing.aggregate_flow_costs["electricity"] * cost_parameters['operating_days_per_year'] / 365))
+    # m.fs.costing.VOP_resource_cost = 0
 
     if cost_parameters['has_liquid_waste']:
         m.fs.costing.liquid_waste_resource_cost = Expression(expr=(liq_waste*264.172/42*24*cost_parameters['operating_days_per_year'] / 365*cost_parameters['liq_waste_disposal_cost']*units.USD_2023))

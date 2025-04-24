@@ -33,40 +33,41 @@ from idaes.core.util.scaling import (
     unscaled_constraints_generator,
     badly_scaled_var_generator,
 )
-
+from watertap.core.util.initialization import check_dof
 from watertap.costing import WaterTAPCosting
 
 sys.path.append('E:/codes/SA2_009_004_EY24')
 sys.path.append('E:/codes/SA2_009_004_EY24/prommis/src')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 from prommis_costing import QGESS_costing
+# sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+# print(sys.path)
+#from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 
-def nanofiltration(m, Q_in = 0.014877):
+def nanofiltration(m, Q_in = 0.014877, solute_file = '../solute_parameters2.json'):
     # Read data from 'solute_parameters.json'
-    with open(r"E:/codes/SA2_009_004_EY24/solute_parameters2.json") as f:
+    with open(solute_file) as f:
         solute_data = json.load(f)
 
     # solute list
     solute_list = list(solute_data.keys())
     mw_data = {key: solute_data[key]['mw'] for key in solute_list}
     charge = {key: solute_data[key]['charge'] for key in solute_list}
-    diffusivity = {("Liq",key): 1e-9 for key in solute_list}
+
     m.fs.properties = props.MCASParameterBlock(solute_list=solute_list,
                                                mw_data=mw_data,
                                                charge=charge,
-                                               diffusivity_data=diffusivity,
-                                               density_calculation=props.DensityCalculation.seawater,
-                                               material_flow_basis=props.MaterialFlowBasis.mass)
+                                               density_calculation=props.DensityCalculation.seawater)
 
     # create units
-    m.fs.feed = Feed(property_package=m.fs.properties)
+    m.fs.feed_nf = Feed(property_package=m.fs.properties)
     m.fs.product = Product(property_package=m.fs.properties)
     m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.nf = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
 
     # connections
-    m.fs.feed_to_p1 = Arc(source=m.fs.feed.outlet, destination=m.fs.P1.inlet)
+    m.fs.feed_to_p1 = Arc(source=m.fs.feed_nf.outlet, destination=m.fs.P1.inlet)
     m.fs.p1_to_nf = Arc(source=m.fs.P1.outlet, destination=m.fs.nf.inlet)
     m.fs.s03 = Arc(source=m.fs.nf.permeate, destination=m.fs.product.inlet)
     m.fs.s04 = Arc(source=m.fs.nf.retentate, destination=m.fs.disposal.inlet)
@@ -74,21 +75,20 @@ def nanofiltration(m, Q_in = 0.014877):
     TransformationFactory("network.expand_arcs").apply_to(m)
 
     # specify flowsheet
-    m.fs.feed.properties[0].pressure.fix(101325)  # feed pressure [Pa]
-    m.fs.feed.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
+    m.fs.feed_nf.properties[0].pressure.fix(101325)  # feed pressure [Pa]
+    m.fs.feed_nf.properties[0].temperature.fix(273.15 + 25)  # feed temperature [K]
 
     # properties (cannot be fixed for initialization routines, must calculate the state variables)
-    for key in solute_list:
-        m.fs.feed.properties[0].mass_frac_phase_comp["Liq", key] = solute_data[key]['mass_flow']
+    var_args = {("conc_mass_phase_comp", ("Liq", key)): \
+                solute_data[key]['mass_conc_mg_L']/1000 for key in solute_list} # Convert mg/L to kg/m3
 
-    var_args = {("mass_frac_phase_comp", ("Liq", key)): solute_data[key]['mass_flow'] for key in solute_list}
     var_args[("flow_vol_phase", ("Liq"))] = Q_in
-    m.fs.feed.properties[0].total_dissolved_solids
-    m.fs.feed.properties.calculate_state(
+    m.fs.feed_nf.properties[0].total_dissolved_solids
+    m.fs.feed_nf.properties.calculate_state(
         var_args = var_args,  # feed mass fractions [-]
         hold_state=True,  # fixes the calculated component mass flow rates
     )
-    m.fs.feed.properties[0].assert_electroneutrality(defined_state=True,
+    m.fs.feed_nf.properties[0].assert_electroneutrality(defined_state=True,
                                                      adjust_by_ion='Cl')
     m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P1.outlet.pressure[0].fix(10e5)
@@ -104,8 +104,6 @@ def nanofiltration(m, Q_in = 0.014877):
     m.fs.nf.rejection_phase_comp[0, "Liq", "Cl"] = 0.15  # guess, but electroneutrality enforced below
     charge_comp = {key: solute_data[key]['charge'] for key in solute_list}
 
-    # m.fs.nf.feed_side.properties_in[0].assert_electroneutrality(defined_state=False,
-                                                                #   adjust_by_ion='Cl')
     m.fs.nf.eq_electroneutrality = Constraint(
         expr=0
         == sum(
@@ -130,7 +128,7 @@ def nanofiltration(m, Q_in = 0.014877):
     # Set the scaling to be the inverse of the order of magnitude of the mass concentration
     for key in solute_list:
         m.fs.properties.set_default_scaling(
-            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_flow']), index=("Liq", key)
+            "flow_mass_phase_comp", inverse_order_of_magnitude(solute_data[key]['mass_conc_mg_L']/1000), index=("Liq", key)
          )
 
     m.fs.nf.feed_side.properties_in[0].total_dissolved_solids
@@ -142,15 +140,11 @@ def nanofiltration(m, Q_in = 0.014877):
     iscale.calculate_scaling_factors(m)
 
     # initialize
-    m.fs.feed.initialize()
+    m.fs.feed_nf.initialize()
     propagate_state(m.fs.feed_to_p1)
     m.fs.P1.initialize()
     propagate_state(m.fs.p1_to_nf)
     m.fs.nf.initialize()
-    # propagate_state(m.fs.s03)
-    # m.fs.product.initialize()
-    # propagate_state(m.fs.s04)
-    # m.fs.disposal.initialize()
 
     return m
 
@@ -224,15 +218,14 @@ def main():
     QGESS_costs(model)
     solver = get_solver()
     solver.solve(model)
-
-
-    # QGESSCostingData.report(model.fs.costing2)
-    # QGESSCostingData.display_flowsheet_cost(model.fs.costing2)
+#    QGESSCostingData.report(model.fs.costing2)
+#    QGESSCostingData.display_flowsheet_cost(model.fs.costing2)
 
     model.fs.nf.report()
-#    print(model.fs.nf._get_stream_table_contents())
+    model.fs.nf.properties_permeate[0.0].display()
     print(value(model.fs.costing.QGESS_LCOW))
     model.fs.nf.properties_permeate[0].total_dissolved_solids.display()
+    model.fs.nf.properties_permeate[0].flow_vol.display()
     return model
 
 if __name__ == "__main__":

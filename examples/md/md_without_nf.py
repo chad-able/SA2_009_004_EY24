@@ -6,15 +6,22 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import Expression,Objective,units as pyunits, check_optimal_termination, assert_optimal_termination
+from pyomo.environ import Expression,Objective,units as pyunits, check_optimal_termination, assert_optimal_termination, value
 from watertap.core.util.model_diagnostics import infeasible as infeas
+from prommis_costing import QGESS_costing
+from watertap.costing.unit_models.heater_chiller import (
+    cost_heater_chiller,
+)
+from watertap.costing import WaterTAPCosting
+from idaes.core import UnitModelCostingBlock
 
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
 # Modifications by Adam Atia on 2/7/2025
 # Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
 # Takeaway: Membrane area should be adjusted with flowrate.
 
-
+# Even more modifications by Chad Able on 4/23/2025
+# Adapting prommis costing with a custom function (using WaterTAPCosting as base)
 area = 100
 def main(vis = False):
     m = MD.build()
@@ -126,80 +133,114 @@ if __name__ == "__main__":
     # m.fs.nf.flux_vol_solvent.fix(1.446759259259259e-5)
     # m.fs.nf.area.fix(499.44685)
     # Create QGESS costing block
-    m.fs.costing = QGESSCosting()
+    m.fs.costing = WaterTAPCosting()
+    # Units to include in costing
+    watertap_blocks = [
+        m.fs.MD,
+        m.fs.hx,
+        m.fs.heater,
+        m.fs.chiller,
+        m.fs.mixer,
+        m.fs.pump_feed,
+        m.fs.pump_brine,
+        m.fs.pump_permeate
+    ]
+
+    for i in range(len(watertap_blocks)):
+        if watertap_blocks[i] == m.fs.chiller:
+            watertap_blocks[i].costing = UnitModelCostingBlock(
+                flowsheet_costing_block=m.fs.costing,
+                costing_method=cost_heater_chiller,
+                costing_method_arguments={"HC_type": "chiller"},
+            )
+        elif watertap_blocks[i] == m.fs.heater:
+            watertap_blocks[i].costing = UnitModelCostingBlock(
+                flowsheet_costing_block=m.fs.costing,
+                costing_method=cost_heater_chiller,
+                costing_method_arguments={"HC_type": "electric_heater"},
+            )
+        else:
+            watertap_blocks[i].costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.costing.cost_process()
+    m.fs.costing.add_annual_water_production(m.fs.permeate.properties[0].flow_vol)
+    m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
+    m.fs.costing.add_specific_energy_consumption(m.fs.permeate.properties[0].flow_vol)
+    m.fs.costing.base_currency = pyunits.USD_2023
+    m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=pyunits.convert(m.fs.permeate.properties[0].flow_vol,
+                                                                                  to_units=pyunits.m ** 3 / pyunits.hr))
     
     # Apply costing with detailed parameters
-    m.fs.costing.build_process_costs(
-        # Capital cost factors
-        cost_factor=1.58, 
-        piping_materials_and_labor_percentage=20,
-        electrical_materials_and_labor_percentage=20,
-        instrumentation_percentage=8,
-        plants_services_percentage=10,
-        process_buildings_percentage=40,
-        auxiliary_buildings_percentage=15,
-        site_improvements_percentage=10,
-        equipment_installation_percentage=17,
-        field_expenses_percentage=12,
-        project_management_and_construction_percentage=30,
-        process_contingency_percentage=15,
-        
-        # Labor cost parameters
-        labor_types=[
-            "skilled",
-            "unskilled",
-            "supervisor",
-            "maintenance",
-            "technician",
-            "engineer",
-        ],
-        labor_rate=[26.08, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
-        labor_burden=25,  # % fringe benefits
-        operators_per_shift=[2, 0, 0, 0, 0, 0],
-        hours_per_shift=8,
-        shifts_per_day=3,
-        operating_days_per_year=365,
-        
-        # Product and efficiency parameters
-        mixed_product_sale_price_realization_factor=0.65,
-        efficiency=0.80,  # power usage efficiency
-        resources=[],
-        rates=[],
-        # O&M costs
-        fixed_OM=True,
-        variable_OM=True,
-        land_cost=1,
-        CE_index_year="UKy_2019",
-        
-        # Units to include in costing
-        watertap_blocks=[
-            m.fs.MD, 
-            # m.fs.nf, 
-            # m.fs.P1, 
-            m.fs.hx, 
-            m.fs.heater,
-            m.fs.mixer, 
-            m.fs.pump_feed, 
-            m.fs.pump_brine, 
-            m.fs.pump_permeate
-        ]
-    )
+    # m.fs.costing.build_process_costs(
+    #     # Capital cost factors
+    #     cost_factor=1.58,
+    #     piping_materials_and_labor_percentage=20,
+    #     electrical_materials_and_labor_percentage=20,
+    #     instrumentation_percentage=8,
+    #     plants_services_percentage=10,
+    #     process_buildings_percentage=40,
+    #     auxiliary_buildings_percentage=15,
+    #     site_improvements_percentage=10,
+    #     equipment_installation_percentage=17,
+    #     field_expenses_percentage=12,
+    #     project_management_and_construction_percentage=30,
+    #     process_contingency_percentage=15,
+    #
+    #     # Labor cost parameters
+    #     labor_types=[
+    #         "skilled",
+    #         "unskilled",
+    #         "supervisor",
+    #         "maintenance",
+    #         "technician",
+    #         "engineer",
+    #     ],
+    #     labor_rate=[26.08, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+    #     labor_burden=25,  # % fringe benefits
+    #     operators_per_shift=[2, 0, 0, 0, 0, 0],
+    #     hours_per_shift=8,
+    #     shifts_per_day=3,
+    #     operating_days_per_year=365,
+    #
+    #     # Product and efficiency parameters
+    #     mixed_product_sale_price_realization_factor=0.65,
+    #     efficiency=0.80,  # power usage efficiency
+    #     resources=[],
+    #     rates=[],
+    #     # O&M costs
+    #     fixed_OM=True,
+    #     variable_OM=True,
+    #     land_cost=1,
+    #     CE_index_year="UKy_2019",
+    #
+    #     # Units to include in costing
+    #     watertap_blocks=[
+    #         m.fs.MD,
+    #         # m.fs.nf,
+    #         # m.fs.P1,
+    #         m.fs.hx,
+    #         m.fs.heater,
+    #         m.fs.mixer,
+    #         m.fs.pump_feed,
+    #         m.fs.pump_brine,
+    #         m.fs.pump_permeate
+    #     ]
+    # )
     
     # Initialize costing
-    QGESSCostingData.costing_initialization(m.fs.costing)
-    QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing)
-    
-    # Calculate LCOW (Levelized Cost of Water)
-    denominator = pyunits.convert(
-        m.fs.permeate.properties[0].flow_vol, 
-        to_units=pyunits.m**3 / pyunits.year
-    )
-    m.fs.costing.prommis_LCOW = Expression(
-        expr=m.fs.costing.annualized_cost / denominator * 1e6
-    )
+    # QGESSCostingData.costing_initialization(m.fs.costing)
+    # QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing)
+    #
+    # # Calculate LCOW (Levelized Cost of Water)
+    # denominator = pyunits.convert(
+    #     m.fs.permeate.properties[0].flow_vol,
+    #     to_units=pyunits.m**3 / pyunits.year
+    # )
+    # m.fs.costing.prommis_LCOW = Expression(
+    #     expr=m.fs.costing.annualized_cost / denominator * 1e6
+    # )
     
     # Set objective
-    m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
+    m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     
 
     
@@ -225,10 +266,11 @@ if __name__ == "__main__":
     print(f"solve status:\n{solve_status}")
     assert_optimal_termination(res)
     # m.fs.nf.area.display()
-    m.fs.costing.prommis_LCOW.display()
-    QGESSCostingData.report(m.fs.costing)
-    QGESSCostingData.display_bare_erected_costs(m.fs.costing)
-    QGESSCostingData.display_flowsheet_cost(m.fs.costing)
+    m.fs.costing.QGESS_LCOW.display()
+    print(value(m.fs.costing.aggregate_flow_costs['electricity']))
+    # QGESSCostingData.report(m.fs.costing)
+    # QGESSCostingData.display_bare_erected_costs(m.fs.costing)
+    # QGESSCostingData.display_flowsheet_cost(m.fs.costing)
         
 
     # # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.

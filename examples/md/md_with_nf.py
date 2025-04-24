@@ -6,7 +6,7 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import Expression,Objective,units as pyunits, check_optimal_termination, assert_optimal_termination
+from pyomo.environ import Expression,Objective,units as pyunits, check_optimal_termination, assert_optimal_termination, value
 from watertap.core.util.model_diagnostics import infeasible as infeas
 from watertap.costing import WaterTAPCosting
 import sys
@@ -15,7 +15,9 @@ sys.path.append('E:/codes/SA2_009_004_EY24')
 sys.path.append('E:/codes/SA2_009_004_EY24/prommis/src')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
 from prommis_costing import QGESS_costing
-
+from watertap.costing.unit_models.heater_chiller import (
+    cost_heater_chiller,
+)
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
 # Modifications by Adam Atia on 2/7/2025
 # Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
@@ -144,6 +146,7 @@ if __name__ == "__main__":
         m.fs.P1,
         m.fs.hx,
         m.fs.heater,
+        m.fs.chiller,
         m.fs.mixer,
         m.fs.pump_feed,
         m.fs.pump_brine,
@@ -151,7 +154,20 @@ if __name__ == "__main__":
     ]
 
     for i in range(len(watertap_blocks)):
-        watertap_blocks[i].costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+        if watertap_blocks[i] == m.fs.chiller:
+            watertap_blocks[i].costing = UnitModelCostingBlock(
+                flowsheet_costing_block=m.fs.costing,
+                costing_method=cost_heater_chiller,
+                costing_method_arguments={"HC_type": "chiller"},
+            )
+        elif watertap_blocks[i] == m.fs.heater:
+            watertap_blocks[i].costing = UnitModelCostingBlock(
+                flowsheet_costing_block=m.fs.costing,
+                costing_method=cost_heater_chiller,
+                costing_method_arguments={"HC_type": "electric_heater"},
+            )
+        else:
+            watertap_blocks[i].costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
     m.fs.costing.cost_process()
     m.fs.costing.add_annual_water_production(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
@@ -257,6 +273,7 @@ if __name__ == "__main__":
     assert_optimal_termination(res)
     m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
+    print(value(m.fs.costing.aggregate_flow_costs['electricity']))
     # QGESSCostingData.report(m.fs.costing)
     # QGESSCostingData.display_bare_erected_costs(m.fs.costing)
     # QGESSCostingData.display_flowsheet_cost(m.fs.costing)
