@@ -25,7 +25,7 @@ class ERDtype(StrEnum):
 
 if __name__ == "__main__":
     solver = get_solver()
-    num_stages = 4
+    num_stages = 5
     m = oaro.main(number_of_stages=num_stages, system_recovery=0.5, erd_type=ERDtype.pump_as_turbine)
     watertap_blocks2 = []
     # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
@@ -55,11 +55,19 @@ if __name__ == "__main__":
 
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].fix(7.2258)
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].fix(0.64491)
+
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
 
     m.fs.mass_water_recovery.unfix()
+    m.fs.water_recovery.fix(0.2)
+    res = solver.solve(m, tee=True)
+    assert_optimal_termination(res)
     m.fs.water_recovery.fix(0.5)
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].unfix()
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*1)                # volumetric flow rate (m3/s), equal to 235.8 gpm
+    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(99.304)        # conc in g/L #base 99.304
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
     m = QGESS_costing(m=m, units=watertap_blocks2, water_flow_rate=pyunits.convert(m.fs.product.properties[0].flow_vol,
