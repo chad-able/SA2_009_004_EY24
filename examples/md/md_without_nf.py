@@ -81,8 +81,14 @@ if __name__ == "__main__":
     m.fs.overall_recovery.display()
 
     # NF Permeate conditions
-    m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
-    m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
+    # m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
+    # m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
+    # without NF, feed conditions
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
+    m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*1)                # volumetric flow rate (m3/s), equal to 235.8 gpm
+    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(99.304)        # conc in g/L #base 99.304
+
     res = MD.solve(m, tee=False)
     if check_optimal_termination(res):
         # m.fs.MD.report()
