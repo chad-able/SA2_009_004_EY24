@@ -11,7 +11,40 @@ from pyomo.environ import (
     assert_optimal_termination,
 )
 from pyomo.environ import units
+import traceback
 
+import sys
+
+
+# def function_c():
+#     raise ValueError("Something went wrong in C")
+#
+#
+# def function_b():
+#     function_c()
+#
+#
+# def QGESS_costing_e():
+#     try:
+#
+#         function_b()
+#
+#     except ValueError as e:
+#
+#         print("--- print_exc() ---")
+#
+#         traceback.print_exc()
+#
+#         print("--- print_exception() ---")
+#
+#         traceback.print_exception(type(e), e, e.__traceback__, file=sys.stdout)
+#
+#         print("--- print_stack() ---")
+#
+#         traceback.print_stack()
+#
+#
+# function_a()
 
 
 def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_params):
@@ -125,7 +158,7 @@ def QGESS_cap_cost(m, **cost_params):
 
         # Calculate BEC
 
-    m.fs.costing.total_BEC = Expression(expr=m.fs.costing.total_equip_cost * cost_parameters['BEC_factor'] * units.USD_2023)
+    m.fs.costing.total_BEC = Expression(expr=units.convert(m.fs.costing.total_equip_cost * cost_parameters['BEC_factor'], to_units=units.USD_2023))
 
     # Calculate ancillary costs
     m.fs.costing.piping_MandL = Expression(expr=m.fs.costing.total_BEC * cost_parameters['piping_materials_and_labor_percentage']/100)
@@ -165,7 +198,7 @@ def QGESS_cap_cost(m, **cost_params):
     # TASC and annualized capital costs
 
     m.fs.costing.TASC_cost = Expression(expr=(cost_parameters['TASC_TOC_Factor'] * m.fs.costing.TOC_cost))
-    m.fs.costing.QGESS_annualized_capital_cost = Expression(expr=(cost_parameters['CRF'] * m.fs.costing.TASC_cost))
+    m.fs.costing.QGESS_annualized_capital_cost = Expression(expr=(cost_parameters['CRF'] * m.fs.costing.TASC_cost/units.year))
 
     return m
 
@@ -217,10 +250,10 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
 
     for i in range(len(cost_parameters['labor_rate'])):
         m.fs.costing.QGESS_operating_labor_cost = Expression(expr=(cost_parameters['labor_rate'][i]*cost_parameters['operators_per_shift'][i]*(1+cost_parameters['labor_burden']/100)*cost_parameters['hours_per_shift']*
-                                                                   cost_parameters['shifts_per_day']*cost_parameters['operating_days_per_year']*units.USD_2023))
+                                                                   cost_parameters['shifts_per_day']*cost_parameters['operating_days_per_year']*units.USD_2023/units.year))
 
     #maintenance and material costs
-    m.fs.costing.MM_cost = Expression(expr=cost_parameters['maintenance_material_percentage']/100*m.fs.costing.TPC_cost)
+    m.fs.costing.MM_cost = Expression(expr=cost_parameters['maintenance_material_percentage']/100*m.fs.costing.TPC_cost/units.year)
 
     #QAQC costs
     m.fs.costing.QAQC_cost = Expression(expr=cost_parameters['QAQC_percentage']/100*m.fs.costing.QGESS_operating_labor_cost)
@@ -231,7 +264,7 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
     #Patent costs are ignored (no sales yet)
     #Property taxes
 
-    m.fs.costing.prop_tax_insurance_cost = Expression(expr=cost_parameters['property_tax_and_insurance_percentage']/100*m.fs.costing.TPC_cost)
+    m.fs.costing.prop_tax_insurance_cost = Expression(expr=cost_parameters['property_tax_and_insurance_percentage']/100*m.fs.costing.TPC_cost/units.year)
 
     #WaterTAP costs are included here for fixed operating costs
     #For this flowsheet, only membrane replacement is needed
@@ -246,7 +279,7 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
     #Per resource (waste disposal, antiscalant, electricity)
     #Note that solid masses are taken from OLI (not calculated in WaterTAP)
     m.fs.costing.VOP_resource_cost = Expression(
-        expr=(m.fs.costing.aggregate_flow_costs["electricity"] * cost_parameters['operating_days_per_year'] / 365))
+        expr=(units.convert(m.fs.costing.aggregate_flow_costs["electricity"], to_units=units.USD_2023/units.year) * cost_parameters['operating_days_per_year'] / 365))
     # m.fs.costing.VOP_resource_cost = 0
 
     if cost_parameters['has_liquid_waste']:
