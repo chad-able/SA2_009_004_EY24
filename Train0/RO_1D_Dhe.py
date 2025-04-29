@@ -52,10 +52,13 @@ from watertap.core.wt_database import Database
 import watertap.property_models.seawater_prop_pack as prop_SW
 import time
 import idaes.logger as idaeslog
-from NF_ZO import nanofiltration
+from NF_ZO_nick import nanofiltration
 
-# sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
+sys.path.append('E:/codes/SA2_009_004_EY24')
+sys.path.append('E:/codes/SA2_009_004_EY24/prommis/src')
 from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
+from prommis_costing import QGESS_costing
+
 
 def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
@@ -73,7 +76,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # m2.fs = FlowsheetBlock(dynamic=False)
     nanofiltration(m)
     # costing
-    m.fs.costing2 = QGESSCosting()
+    # m.fs.costing2 = QGESSCosting()
     m.fs.costing = WaterTAPCosting()
 
     # create units
@@ -209,72 +212,80 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     #     * units.day
     # )
 
-    m.fs.costing2.build_process_costs(
-        # arguments related to installation costs
-        piping_materials_and_labor_percentage=20,
-        electrical_materials_and_labor_percentage=20,
-        instrumentation_percentage=8,
-        plants_services_percentage=10,
-        process_buildings_percentage=40,
-        auxiliary_buildings_percentage=15,
-        site_improvements_percentage=10,
-        equipment_installation_percentage=17,
-        field_expenses_percentage=12,
-        project_management_and_construction_percentage=30,
-        process_contingency_percentage=15,
-        # argument related to Fixed OM costs
-        labor_types=[
-            "skilled",
-            "unskilled",
-            "supervisor",
-            "maintenance",
-            "technician",
-            "engineer",
-        ],
-        labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
-        labor_burden=25,  # % fringe benefits
-        operators_per_shift=[4, 9, 2, 2, 2, 3],
-        hours_per_shift=8,
-        shifts_per_day=3,
-        operating_days_per_year=336,
-        mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
-        # arguments related to total owners costs
-        land_cost=m.fs.land_cost,
-        resources=[],
-        rates=[],
-        fixed_OM=True,
-        variable_OM=True,
-        feed_input=None,
-        efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
-        waste=[],
-        recovery_rate_per_year=None,
-        CE_index_year="UKy_2019",
-        watertap_blocks = [m.fs.RO, m.fs.P2]
+    # m.fs.costing2.build_process_costs(
+    #     # arguments related to installation costs
+    #     piping_materials_and_labor_percentage=20,
+    #     electrical_materials_and_labor_percentage=20,
+    #     instrumentation_percentage=8,
+    #     plants_services_percentage=10,
+    #     process_buildings_percentage=40,
+    #     auxiliary_buildings_percentage=15,
+    #     site_improvements_percentage=10,
+    #     equipment_installation_percentage=17,
+    #     field_expenses_percentage=12,
+    #     project_management_and_construction_percentage=30,
+    #     process_contingency_percentage=15,
+    #     # argument related to Fixed OM costs
+    #     labor_types=[
+    #         "skilled",
+    #         "unskilled",
+    #         "supervisor",
+    #         "maintenance",
+    #         "technician",
+    #         "engineer",
+    #     ],
+    #     labor_rate=[24.98, 19.08, 30.39, 22.73, 21.97, 45.85],  # USD/hr
+    #     labor_burden=25,  # % fringe benefits
+    #     operators_per_shift=[4, 9, 2, 2, 2, 3],
+    #     hours_per_shift=8,
+    #     shifts_per_day=3,
+    #     operating_days_per_year=336,
+    #     mixed_product_sale_price_realization_factor=0.65,  # 65% price realization for mixed products
+    #     # arguments related to total owners costs
+    #     land_cost=m.fs.land_cost,
+    #     resources=[],
+    #     rates=[],
+    #     fixed_OM=True,
+    #     variable_OM=True,
+    #     feed_input=None,
+    #     efficiency=0.80,  # power usage efficiency, or fixed motor/distribution efficiency
+    #     waste=[],
+    #     recovery_rate_per_year=None,
+    #     CE_index_year="UKy_2019",
+    #     watertap_blocks = [m.fs.RO, m.fs.P2]
+    #
+    # )
 
-    )
+    watertap_blocks = [m.fs.nf, m.fs.P1, m.fs.RO, m.fs.P2]
 
-    denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
-    m.fs.costing.prommis_LCOW = Expression(expr=m.fs.costing2.annualized_cost / denominator * 1e6)
+    m.fs.nf.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.P1.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+    m.fs.costing.base_currency = pyunits.USD_2023
+    m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol,
+                                                                                to_units=pyunits.m ** 3 / pyunits.hr))
+    # denominator = pyunits.convert(m.fs.RO.mixed_permeate[0].flow_vol, to_units=pyunits.m**3 / pyunits.year)
+    # m.fs.costing.prommis_LCOW = Expression(expr=m.fs.costing2.annualized_cost / denominator * 1e6)
 
-    QGESSCostingData.costing_initialization(m.fs.costing2)
-    QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
+    # QGESSCostingData.costing_initialization(m.fs.costing2)
+    # QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
 
     # consistent units
-    assert_units_consistent(m)
+    # assert_units_consistent(m)
 
     # optimize
-    m.fs.objective = Objective(expr=m.fs.costing.prommis_LCOW)
+    m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     optimization_results = solver.solve(m)
     # nf_results = solver.solve(m2)
     assert_optimal_termination(optimization_results)
 
-    QGESSCostingData.report(m.fs.costing2, export=True)
-    QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
+    # QGESSCostingData.report(m.fs.costing2, export=True)
+    # QGESSCostingData.display_flowsheet_cost(m.fs.costing2)
 
     #print
-    m.fs.feed.report()
+    # m.fs.feed.report()
     m.fs.P2.report()
     m.fs.RO.report()
+    m.fs.costing.QGESS_LCOW.display()
     df = m.fs.RO._get_stream_table_contents()
     pd.options.display.float_format = '{:,.10f}'.format
     df.to_csv('stream_table_contents.csv', index=False, float_format='%.10f')
@@ -282,15 +293,15 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
     # Dictionary for results
     results = { "SEC": value(m.fs.costing.specific_energy_consumption),
-                "LCOW": value(m.fs.costing.prommis_LCOW),
+                "LCOW": value(m.fs.costing.QGESS_LCOW),
                 "Watertap LCOW": value(m.fs.costing.LCOW),
                 "Permeate Flow": value(m.fs.RO.mixed_permeate[0].flow_vol),
                 "Brine Flow": value(m.fs.RO.feed_side.properties[0, 1].flow_vol),
                 "Pump Pressure": value(m.fs.P2.outlet.pressure[0]),
                 "Membrane Area": value(m.fs.RO.area),
                 "Recovery": value(m.fs.RO.recovery_vol_phase[0,'Liq']),
-                "Variable OM Cost": value(m.fs.costing2.total_variable_OM_cost[0]),
-                "Fixed OM Cost": value(m.fs.costing2.total_fixed_OM_cost),
+                "Variable OM Cost": value(m.fs.costing.QGESS_fixed_operating_cost),
+                "Fixed OM Cost": value(m.fs.costing.QGESS_variable_operating_cost),
                 }
 
 
@@ -307,7 +318,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
 
     print(
         "PROMMIS LCOW: %.2f USD/ton"
-        % value(m.fs.costing.LCOW)
+        % value(m.fs.costing.QGESS_LCOW)
         )
 
 
@@ -381,15 +392,15 @@ if __name__ == '__main__':
     # Reprint some results:
     # Dictionary for results
     results = { "SEC": value(m.fs.costing.specific_energy_consumption),
-                "LCOW": value(m.fs.costing.prommis_LCOW),
+                "LCOW": value(m.fs.costing.QGESS_LCOW),
                 "Watertap LCOW": value(m.fs.costing.LCOW),
                 "Permeate Flow": value(m.fs.RO.mixed_permeate[0].flow_vol),
                 "Brine Flow": value(m.fs.RO.feed_side.properties[0, 1].flow_vol),
                 "Pump Pressure": value(m.fs.P2.outlet.pressure[0]),
                 "Membrane Area": value(m.fs.RO.area),
                 "Recovery": value(m.fs.RO.recovery_vol_phase[0,'Liq']),
-                "Variable OM Cost": value(m.fs.costing2.total_variable_OM_cost[0]),
-                "Fixed OM Cost": value(m.fs.costing2.total_fixed_OM_cost),
+                "Variable OM Cost": value(m.fs.costing.QGESS_variable_operating_cost),
+                "Fixed OM Cost": value(m.fs.costing.QGESS_fixed_operating_cost),
                 }
 
 
@@ -406,5 +417,5 @@ if __name__ == '__main__':
 
     print(
         "PROMMIS LCOW: %.2f USD/ton"
-        % value(m.fs.costing.LCOW)
+        % value(m.fs.costing.QGESS_LCOW)
         )
