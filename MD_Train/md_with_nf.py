@@ -14,7 +14,7 @@ from pyomo.environ import (
 )
 
 # IDAES and WaterTAP imports
-import MD_single_stage_recirc_no_costing as MD
+from base_flowsheets import MD_single_stage_recirc_no_costing as MD
 from idaes.core import UnitModelCostingBlock
 from idaes.core.util.model_statistics import degrees_of_freedom
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
