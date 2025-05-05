@@ -194,7 +194,7 @@ def setup_costing(m):
     m.fs.costing.add_annual_water_production(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.permeate.properties[0].flow_vol)
-    m.fs.costing.base_currency = pyunits.USD_2023
+    m.fs.costing.base_currency = pyunits.USD_2018
 
     # Apply QGESS costing
     m = QGESS_costing(
@@ -237,7 +237,7 @@ def report_results(m):
     assert_optimal_termination(MD.solve(m))
     m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
-    print(f"Electricity cost: {value(m.fs.costing.aggregate_flow_costs['electricity'])}")
+
 
 
 if __name__ == "__main__":
