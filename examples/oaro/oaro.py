@@ -73,8 +73,11 @@ if __name__ == "__main__":
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(99.304)        # conc in g/L #base 99.304
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
+    cost_params = {
+        'has_liquid_waste': True
+    }
     m = QGESS_costing(m=m, units=watertap_blocks2, water_flow_rate=pyunits.convert(m.fs.product.properties[0].flow_vol,
-                                                                                   to_units=pyunits.m ** 3 / pyunits.hr))
+                                                                                   to_units=pyunits.m ** 3 / pyunits.hr), liq_waste=m.fs.disposal.properties[0].flow_vol, **cost_params)
 
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     res = solver.solve(m, tee=True)
