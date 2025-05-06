@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # without NF, feed conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*0.5)                # volumetric flow rate (m3/s), equal to 235.8 gpm
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877)                # volumetric flow rate (m3/s), equal to 235.8 gpm
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(99.304)        # conc in g/L #base 99.304
 
     res = MD.solve(m, tee=False)
@@ -172,8 +172,11 @@ if __name__ == "__main__":
     m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.base_currency = pyunits.USD_2023
+    cost_params = {
+        'has_liquid_waste': True
+    }
     m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=pyunits.convert(m.fs.permeate.properties[0].flow_vol,
-                                                                                  to_units=pyunits.m ** 3 / pyunits.hr))
+                                                                                  to_units=pyunits.m ** 3 / pyunits.hr), liq_waste=m.fs.reject.properties[0].flow_vol, **cost_params)
     
     # Apply costing with detailed parameters
     # m.fs.costing.build_process_costs(
@@ -275,6 +278,7 @@ if __name__ == "__main__":
     # m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
     print(value(m.fs.costing.aggregate_flow_costs['electricity']))
+    print(value(m.fs.costing.liquid_waste_resource_cost))
     # QGESSCostingData.report(m.fs.costing)
     # QGESSCostingData.display_bare_erected_costs(m.fs.costing)
     # QGESSCostingData.display_flowsheet_cost(m.fs.costing)

@@ -112,9 +112,11 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
         # 'cost_units': units.USD_2018
     }
 
-    for key, value in cost_params.items():
-        if key in cost_parameters:
-            cost_parameters[key] = value
+    # for key, value in cost_params.items():
+    #     if key in cost_parameters:
+    #         cost_parameters[key] = value
+    cost_parameters.update(cost_params)
+    print("Liquid waste flag is ", cost_parameters['has_liquid_waste'])
 
     total_equip_cost = 0
     for unit in units:
@@ -152,9 +154,7 @@ def QGESS_cap_cost(m, **cost_params):
         'CRF': 0.0769,
     }
 
-    for key, value in cost_params.items():
-        if key in cost_parameters:
-            cost_parameters[key] = value
+    cost_parameters.update(cost_params)
 
         # Calculate BEC
 
@@ -244,9 +244,7 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
         # 'cost_units': units.USD_2018,
     }
 
-    for key, value in cost_params.items():
-        if key in cost_parameters:
-            cost_parameters[key] = value
+    cost_parameters.update(cost_params)
 
     for i in range(len(cost_parameters['labor_rate'])):
         m.fs.costing.QGESS_operating_labor_cost = Expression(expr=(cost_parameters['labor_rate'][i]*cost_parameters['operators_per_shift'][i]*(1+cost_parameters['labor_burden']/100)*cost_parameters['hours_per_shift']*
@@ -278,18 +276,20 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
 
     #Per resource (waste disposal, antiscalant, electricity)
     #Note that solid masses are taken from OLI (not calculated in WaterTAP)
-    m.fs.costing.VOP_resource_cost = Expression(
-        expr=(units.convert(m.fs.costing.aggregate_flow_costs["electricity"], to_units=units.USD_2023/units.year) * cost_parameters['operating_days_per_year'] / 365))
+    vop_cost = units.convert(m.fs.costing.aggregate_flow_costs["electricity"], to_units=units.USD_2023/units.year) * cost_parameters['operating_days_per_year'] / 365
     # m.fs.costing.VOP_resource_cost = 0
 
     if cost_parameters['has_liquid_waste']:
-        m.fs.costing.liquid_waste_resource_cost = Expression(expr=(liq_waste*264.172/42*24*cost_parameters['operating_days_per_year'] / 365*cost_parameters['liq_waste_disposal_cost']*units.USD_2023))
-        m.fs.costing.VOP_resource_cost = m.fs.costing.VOP_resource_cost + m.fs.costing.liquid_waste_resource_cost
+        m.fs.costing.liquid_waste_resource_cost = Expression(expr=(units.convert(liq_waste, to_units=units.m ** 3 / units.hr)*264.172/42*24*cost_parameters['operating_days_per_year']*cost_parameters['liq_waste_disposal_cost']*units.USD_2023/units.year*(units.hr/units.meter**3)))
+        liq_waste_cost = units.convert(liq_waste, to_units=units.m ** 3 / units.hr)*264.172/42*24*cost_parameters['operating_days_per_year']*cost_parameters['liq_waste_disposal_cost']*units.USD_2023/units.year*(units.hr/units.meter**3)
+        vop_cost += liq_waste_cost
 
     if cost_parameters['has_solid_waste']:
-        m.fs.costing.solid_waste_resource_cost = Expression(expr=sol_waste*cost_parameters['sol_waste_disposal_cost']*units.USD_2023)
-        m.fs.costing.VOP_resource_cost = m.fs.costing.VOP_resource_cost + m.fs.costing.solid_waste_resource_cost
+        m.fs.costing.solid_waste_resource_cost = Expression(expr=sol_waste*cost_parameters['sol_waste_disposal_cost']*units.USD_2023/units.year)
+        sol_waste_cost = sol_waste*cost_parameters['sol_waste_disposal_cost']*units.USD_2023/units.year
+        vop_cost += sol_waste_cost
 
+    m.fs.costing.VOP_resource_cost = Expression(expr=vop_cost)
     m.fs.costing.plant_overhead_cost = Expression(expr=(0.2*(m.fs.costing.QGESS_fixed_operating_cost+m.fs.costing.VOP_resource_cost)))
 
     m.fs.costing.QGESS_variable_operating_cost = Expression(expr=(m.fs.costing.VOP_resource_cost+m.fs.costing.plant_overhead_cost))
