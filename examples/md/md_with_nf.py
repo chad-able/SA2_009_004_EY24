@@ -134,13 +134,13 @@ if __name__ == "__main__":
     # m.fs.disposal = Product(property_package=m.fs.properties)
     m.fs.nf = NanofiltrationZO(property_package=m.fs.properties)
     m.fs.P1 = Pump(property_package=m.fs.properties)
-
+    nf_recovery = 0.5
     m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
     m.fs.P1.outlet.pressure[0].fix(10e5)
 
     # fully specify system
     m.fs.nf.properties_permeate[0].pressure.fix(101325)
-    m.fs.nf.recovery_vol_phase.fix(0.5)
+    m.fs.nf.recovery_vol_phase.fix(nf_recovery)
     m.fs.nf.flux_vol_solvent.fix(1.446759259259259e-5)
     m.fs.nf.area.fix(499.44685)
     # Create QGESS costing block
@@ -179,7 +179,12 @@ if __name__ == "__main__":
     m.fs.costing.add_LCOW(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.permeate.properties[0].flow_vol)
     m.fs.costing.base_currency = pyunits.USD_2023
-    m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=pyunits.convert(m.fs.permeate.properties[0].flow_vol, to_units=pyunits.m ** 3 / pyunits.hr))
+    cost_params = {
+        'has_liquid_waste': True
+    }
+    liq_waste = m.fs.reject.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol*(1-nf_recovery)
+    m = QGESS_costing(m=m, units=watertap_blocks, water_flow_rate=pyunits.convert(m.fs.permeate.properties[0].flow_vol,
+                                                                                  to_units=pyunits.m ** 3 / pyunits.hr), liq_waste=liq_waste, **cost_params)
     
     # Apply costing with detailed parameters
     # m.fs.costing.build_process_costs(
@@ -284,6 +289,7 @@ if __name__ == "__main__":
     m.fs.costing.QGESS_annualized_capital_cost.display()
     m.fs.costing.QGESS_fixed_operating_cost.display()
     m.fs.costing.QGESS_variable_operating_cost.display()
+    m.fs.nf.costing.capital_cost.display()
     # QGESSCostingData.report(m.fs.costing)
     # QGESSCostingData.display_bare_erected_costs(m.fs.costing)
     # QGESSCostingData.display_flowsheet_cost(m.fs.costing)
