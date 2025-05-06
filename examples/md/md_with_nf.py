@@ -18,6 +18,7 @@ from prommis_costing import QGESS_costing
 from watertap.costing.unit_models.heater_chiller import (
     cost_heater_chiller,
 )
+from pyomo.util.check_units import assert_units_consistent
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
 # Modifications by Adam Atia on 2/7/2025
 # Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
@@ -90,7 +91,7 @@ if __name__ == "__main__":
     # m.fs.feed.flow_mass_phase_comp[0,"Liq","TDS"].fix(0.64491)
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439)                # volumetric flow rate (m3/s), equal to 235.8 gpm/2 post NF
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439/2)                # volumetric flow rate (m3/s), equal to 235.8 gpm/2 post NF
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(86.650)        # conc in g/L #base 86.650 post NF at 50%
 
     res = MD.solve(m, tee=False)
@@ -251,6 +252,7 @@ if __name__ == "__main__":
     # )
     
     # Set objective
+    assert_units_consistent(m)
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     
 
@@ -279,6 +281,9 @@ if __name__ == "__main__":
     m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
     print(value(m.fs.costing.aggregate_flow_costs['electricity']))
+    m.fs.costing.QGESS_annualized_capital_cost.display()
+    m.fs.costing.QGESS_fixed_operating_cost.display()
+    m.fs.costing.QGESS_variable_operating_cost.display()
     # QGESSCostingData.report(m.fs.costing)
     # QGESSCostingData.display_bare_erected_costs(m.fs.costing)
     # QGESSCostingData.display_flowsheet_cost(m.fs.costing)

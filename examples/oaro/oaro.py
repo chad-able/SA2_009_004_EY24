@@ -5,12 +5,12 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination, Objective, Var
+from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination, Objective, Var, Block, Expression
 from watertap.core.solvers import get_solver
 from idaes.core.util.misc import StrEnum
 from watertap.core.util.model_diagnostics import infeasible as infeas
 from prommis_costing import QGESS_costing
-
+from pyomo.util.check_units import assert_units_consistent, identify_inconsistent_units, check_units_equivalent, units as units_visitor
 
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/oaro/oaro.py
 # Modifications by Adam Atia on 2/7/2025
@@ -59,6 +59,9 @@ if __name__ == "__main__":
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)
 
+
+
+    # assert_units_consistent(m)
     m.fs.mass_water_recovery.unfix()
     m.fs.water_recovery.fix(0.2)
     res = solver.solve(m, tee=True)
@@ -72,6 +75,7 @@ if __name__ == "__main__":
     assert_optimal_termination(res)
     m = QGESS_costing(m=m, units=watertap_blocks2, water_flow_rate=pyunits.convert(m.fs.product.properties[0].flow_vol,
                                                                                    to_units=pyunits.m ** 3 / pyunits.hr))
+
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     res = solver.solve(m, tee=True)
     assert_optimal_termination(res)

@@ -14,7 +14,7 @@ from watertap.costing.unit_models.heater_chiller import (
 )
 from watertap.costing import WaterTAPCosting
 from idaes.core import UnitModelCostingBlock
-
+from pyomo.util.check_units import assert_units_consistent
 # Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/md/md.py
 # Modifications by Adam Atia on 2/7/2025
 # Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # without NF, feed conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*1)                # volumetric flow rate (m3/s), equal to 235.8 gpm
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*0.5)                # volumetric flow rate (m3/s), equal to 235.8 gpm
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(99.304)        # conc in g/L #base 99.304
 
     res = MD.solve(m, tee=False)
@@ -246,6 +246,7 @@ if __name__ == "__main__":
     # )
     
     # Set objective
+    assert_units_consistent(m)
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
     
 

@@ -270,7 +270,7 @@ def RO_1D_Dhe(process_variable = "recovery", process_value = 0.2, vis=False):
     # QGESSCostingData.initialize_fixed_OM_costs(m.fs.costing2)
 
     # consistent units
-    # assert_units_consistent(m)
+    assert_units_consistent(m)
 
     # optimize
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
