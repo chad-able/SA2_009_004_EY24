@@ -33,9 +33,6 @@ from idaes.core.util.scaling import (
     badly_scaled_var_generator,
 )
 
-sys.path.append('/Users/nicktiwari/Documents/prommis/src/')
-from prommis.uky.costing.ree_plant_capcost import QGESSCosting, QGESSCostingData
-
 def nanofiltration(m):
     # Read data from 'solute_parameters.json'
     with open("solute_parameters.json") as f:

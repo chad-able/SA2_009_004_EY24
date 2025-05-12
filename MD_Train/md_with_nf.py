@@ -41,6 +41,7 @@ MEMBRANE_AREA = 100  # m²
 FEED_FLOW_MASS = 1  # kg/s
 FEED_MASS_FRAC_TDS = 0.035
 CONC_MASS_COMP_TDS = 86.65 #g/L
+NF_RECOVERY = 0.5
 
 
 def load_solute_data():
@@ -104,7 +105,7 @@ def setup_optimization(m):
     # Update feed conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439)
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877 * NF_RECOVERY)
     # m3/s, equal to 235.8 gpm/2 post NF
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(CONC_MASS_COMP_TDS)
     # g/L post NF at 50%
@@ -232,7 +233,9 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             m.fs.MD.area.display()
 
             data.append(export_variables_to_dict(recovery,
-                                                 m.fs.costing))
+                                                 m.fs.costing,
+                                                 nf_recovery_fraction=NF_RECOVERY,
+                                                 ))
 
             solve_status[ind] = 1
         else:
@@ -257,7 +260,7 @@ if __name__ == "__main__":
     m = setup_optimization(m)
     m = setup_nf_for_costing(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m,np.arange(0.2,0.6,0.02).tolist())
+    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
     report_results(m)
 
 

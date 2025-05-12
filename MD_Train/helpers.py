@@ -1,7 +1,7 @@
 from pyomo.environ import Var, value
 import json
 
-def export_variables_to_dict(recovery, model):
+def export_variables_to_dict(recovery, model, nf_recovery_fraction=1.0):
     """
     Export all variables from a Pyomo model to a JSON file.
     Works with both scalar and indexed variables.
@@ -10,7 +10,7 @@ def export_variables_to_dict(recovery, model):
     # Create a dictionary to hold all variable values
     var_dict = {}
 
-    var_dict['recovery'] = round(recovery, 3)
+    var_dict['recovery'] = round(recovery, 3) * nf_recovery_fraction
 
     # Iterate through all variable components
     for v in model.component_objects(Var, active=True):
