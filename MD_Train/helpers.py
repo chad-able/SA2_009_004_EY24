@@ -1,7 +1,7 @@
 from pyomo.environ import Var, value
 import json
 
-def export_variables_to_dict(recovery, model, filename='md_with_nf_data.json'):
+def export_variables_to_dict(recovery, model):
     """
     Export all variables from a Pyomo model to a JSON file.
     Works with both scalar and indexed variables.
@@ -31,6 +31,7 @@ def export_variables_to_dict(recovery, model, filename='md_with_nf_data.json'):
 
     return var_dict  # Also return the dictionary in case it's needed
 
-def dump_to_json(data: list):
-    with open('md_with_nf_data.json', 'w') as f:
+def dump_to_json(data: list, filename: str):
+    with open(filename, 'w') as f:
         json.dump(data, f)
+

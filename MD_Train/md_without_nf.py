@@ -11,6 +11,7 @@ from pyomo.environ import (
     assert_optimal_termination,
     value
 )
+from helpers import export_variables_to_dict, dump_to_json
 
 # IDAES and WaterTAP imports
 
@@ -169,6 +170,8 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
     """Run analysis for different recovery values"""
     solve_status = np.zeros(len(recovery_range))
 
+    data = []
+
     for ind, recovery in enumerate(recovery_range):
         m.fs.overall_recovery.fix(recovery)
         print(f"FIXED RECOVERY TO {recovery}")
@@ -176,10 +179,18 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
         res = MD.solve(m, tee=True)
         if check_optimal_termination(res):
             m.fs.MD.area.display()
+
+            data.append(export_variables_to_dict(recovery,
+                                                 m.fs.costing,
+                                                 ))
+
             solve_status[ind] = 1
         else:
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
+
+    dump_to_json(data=data,
+                 filename='md_without_nf.json',)
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -197,5 +208,5 @@ if __name__ == "__main__":
     m = main()
     m = setup_optimization(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m)
+    m, solve_status = run_recovery_analysis(m,np.arange(0.2,0.6,0.02).tolist())
     report_results(m)

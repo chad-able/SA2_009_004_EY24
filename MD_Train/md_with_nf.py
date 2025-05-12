@@ -40,6 +40,7 @@ from prommis_costing import QGESS_costing
 MEMBRANE_AREA = 100  # m²
 FEED_FLOW_MASS = 1  # kg/s
 FEED_MASS_FRAC_TDS = 0.035
+CONC_MASS_COMP_TDS = 86.65 #g/L
 
 
 def load_solute_data():
@@ -105,7 +106,7 @@ def setup_optimization(m):
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
     m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439)
     # m3/s, equal to 235.8 gpm/2 post NF
-    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(86.650)
+    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(CONC_MASS_COMP_TDS)
     # g/L post NF at 50%
 
     # Solve with new feed conditions
@@ -238,7 +239,9 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
-    dump_to_json(data=data)
+    dump_to_json(data=data,
+                 filename='md_with_nf.json')
+
     print(f"solve status:\n{solve_status}")
     return m, solve_status
 
