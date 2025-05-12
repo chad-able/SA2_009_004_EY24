@@ -23,7 +23,7 @@ from watertap.costing import WaterTAPCosting
 
 # Get the directory of the current script for relative paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../..'))  # Two directories up
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../'))  # Two directories up
 
 # Add project root to path for local imports
 import sys
