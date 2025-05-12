@@ -10,8 +10,10 @@ from pyomo.environ import (
     units as pyunits,
     check_optimal_termination,
     assert_optimal_termination,
-    value
+    value,
+    Var
 )
+from helpers import export_variables_to_dict, dump_to_json
 
 # IDAES and WaterTAP imports
 from base_flowsheets import MD_single_stage_recirc_no_costing as MD
@@ -101,8 +103,10 @@ def setup_optimization(m):
     # Update feed conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "TDS"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439)  # m3/s, equal to 235.8 gpm/2 post NF
-    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(86.650)  # g/L post NF at 50%
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.007439)
+    # m3/s, equal to 235.8 gpm/2 post NF
+    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(86.650)
+    # g/L post NF at 50%
 
     # Solve with new feed conditions
     res = MD.solve(m, tee=False)
@@ -216,6 +220,8 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
     """Run analysis for different recovery values"""
     solve_status = np.zeros(len(recovery_range))
 
+    data = []
+
     for ind, recovery in enumerate(recovery_range):
         m.fs.overall_recovery.fix(recovery)
         print(f"FIXED RECOVERY TO {recovery}")
@@ -223,14 +229,18 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
         res = MD.solve(m, tee=True)
         if check_optimal_termination(res):
             m.fs.MD.area.display()
+
+            data.append(export_variables_to_dict(recovery,
+                                                 m.fs.costing))
+
             solve_status[ind] = 1
         else:
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
+    dump_to_json(data=data)
     print(f"solve status:\n{solve_status}")
     return m, solve_status
-
 
 def report_results(m):
     """Report final results"""
@@ -238,13 +248,13 @@ def report_results(m):
     m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
 
-
-
 if __name__ == "__main__":
     # Main execution flow
     m = main()
     m = setup_optimization(m)
     m = setup_nf_for_costing(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m)
+    m, solve_status = run_recovery_analysis(m,np.arange(0.2,0.6,0.02).tolist())
     report_results(m)
+
+
