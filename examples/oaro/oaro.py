@@ -5,30 +5,74 @@ import numpy as np
 from idaes.core.util.tables import arcs_to_stream_dict, create_stream_table_dataframe
 import pandas as pd
 import time
-from pyomo.environ import units as pyunits, check_optimal_termination, assert_optimal_termination, Objective, Var
+import os
+from pyomo.environ import (
+    units as pyunits,
+    check_optimal_termination,
+    assert_optimal_termination,
+    Objective,
+    Var,
+    Expression,
+    value
+)
 from watertap.core.solvers import get_solver
 from idaes.core.util.misc import StrEnum
 from watertap.core.util.model_diagnostics import infeasible as infeas
+from idaes.core import UnitModelCostingBlock
+from watertap.costing import WaterTAPCosting
+
+# Get the directory of the current script for relative paths
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../..'))  # Two directories up
+
+# Add project root to path for local imports
+import sys
+sys.path.append(PROJECT_ROOT)
 from prommis_costing import QGESS_costing
+from MD_Train.helpers import export_variables_to_dict, dump_to_json
 
-
-# Original code taken from Nick Tiwari & Chad Able: https://github.com/chad-able/SA2_009_004_EY24/blob/5fe7f72eed2caaf2aa5546309caab3e0070b82ba/examples/oaro/oaro.py
-# Modifications by Adam Atia on 2/7/2025
-# Motivation: determine why increased feed flowrates lead to failure to converge (solves at 1 kg/s, fails at 5 kg/s)
-# Takeaway: Membrane areas should be adjusted with flowrate, and some vars should be unfixed for optimization.
-
-# 4/7/2025: replacing OARO flowsheet with multi-stage OARO flowsheet
+# Constants
+FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
+FEED_CONC_MASS_NACL = 99.304  # g/L
 
 class ERDtype(StrEnum):
     pump_as_turbine = "pump_as_turbine"
 
 
-if __name__ == "__main__":
+def main(vis=False, recovery=0.5):
+    """Build and initialize the OARO model"""
     solver = get_solver()
     num_stages = 5
-    m = oaro.main(number_of_stages=num_stages, system_recovery=0.5, erd_type=ERDtype.pump_as_turbine)
-    watertap_blocks2 = []
-    # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
+
+    # Build model
+    m = oaro.main(
+        number_of_stages=num_stages,
+        system_recovery=0.5,
+        erd_type=ERDtype.pump_as_turbine
+    )
+
+    # Initial solve
+    res = solver.solve(m, tee=False)
+    assert_optimal_termination(res)
+
+    if vis:
+        m.fs.visualize("Flowsheet")
+        try:
+            print("Type ^C to stop the program")
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Program stopped")
+
+    return m, num_stages
+
+
+def setup_optimization(m, num_stages):
+    """Set up the model for optimization"""
+    solver = get_solver()
+    watertap_blocks = []
+
+    # Removing upper bounds on OARO module dimensions, unfixing OARO module area
     for stage in m.fs.NonFinalStages:
         m.fs.OAROUnits[stage].area.unfix()
         m.fs.OAROUnits[stage].area.setub(None)
@@ -37,101 +81,134 @@ if __name__ == "__main__":
 
         # Unfix OARO feed velocity
         m.fs.OAROUnits[stage].feed_side.velocity[0, 0].unfix()
-        watertap_blocks2.append(m.fs.OAROUnits[stage])
-        watertap_blocks2.append(m.fs.PrimaryPumps[stage])
-        if stage > 1:
-            watertap_blocks2.append(m.fs.RecyclePumps[stage])
-        watertap_blocks2.append(m.fs.EnergyRecoveryDevices[stage])
 
-    # Removing upper bounds on RO module dimensions, but more importantly, unfixing RO module width!
+        # Add units to costing blocks list
+        watertap_blocks.append(m.fs.OAROUnits[stage])
+        watertap_blocks.append(m.fs.PrimaryPumps[stage])
+
+        if stage > 1:
+            watertap_blocks.append(m.fs.RecyclePumps[stage])
+
+        watertap_blocks.append(m.fs.EnergyRecoveryDevices[stage])
+
+    # Removing upper bounds on RO module dimensions, unfixing RO module width
     m.fs.RO.width.unfix()
     m.fs.RO.area.setub(None)
     m.fs.RO.width.setub(None)
     m.fs.RO.length.setub(None)
-    watertap_blocks2.append(m.fs.RO)
-    watertap_blocks2.append(m.fs.PrimaryPumps[num_stages-1])
-    watertap_blocks2.append(m.fs.EnergyRecoveryDevices[num_stages-1])
 
+    # Add RO and final stage components to costing blocks list
+    watertap_blocks.append(m.fs.RO)
+    watertap_blocks.append(m.fs.PrimaryPumps[num_stages-1])
+    watertap_blocks.append(m.fs.EnergyRecoveryDevices[num_stages-1])
 
+    # Fix initial flow conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].fix(7.2258)
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].fix(0.64491)
 
-    res = solver.solve(m, tee=True)
+    # Solve with initial conditions
+    res = solver.solve(m, tee=False)
     assert_optimal_termination(res)
 
+    # Update recovery and release mass flow constraints
     m.fs.mass_water_recovery.unfix()
     m.fs.water_recovery.fix(0.2)
-    res = solver.solve(m, tee=True)
+
+    # Solve with new recovery
+    res = solver.solve(m, tee=False)
     assert_optimal_termination(res)
-    m.fs.water_recovery.fix(0.5)
+
+    # Update feed conditions
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "H2O"].unfix()
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].unfix()
-    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(0.014877*1)                # volumetric flow rate (m3/s), equal to 235.8 gpm
-    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(99.304)        # conc in g/L #base 99.304
-    res = solver.solve(m, tee=True)
-    assert_optimal_termination(res)
-    m = QGESS_costing(m=m, units=watertap_blocks2, water_flow_rate=pyunits.convert(m.fs.product.properties[0].flow_vol,
-                                                                                   to_units=pyunits.m ** 3 / pyunits.hr))
+    m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(FEED_FLOW_VOL)  # m3/s, equal to 235.8 gpm
+    m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(FEED_CONC_MASS_NACL)  # g/L
+
+    # Solve with updated feed conditions
+    res = solver.solve(m, tee=False)
+    if check_optimal_termination(res):
+        print("Optimization setup successful")
+    else:
+        print("SOLVE FAILED")
+        infeas.print_infeasible_constraints(m)
+
+    return m, watertap_blocks
+
+
+def setup_costing(m, watertap_blocks):
+    """Set up the costing model"""
+    solver = get_solver()
+
+    # Create QGESS costing
+    m = QGESS_costing(
+        m=m,
+        units=watertap_blocks,
+        water_flow_rate=pyunits.convert(
+            m.fs.product.properties[0].flow_vol,
+            to_units=pyunits.m**3 / pyunits.hr
+        )
+    )
+
+    # Set objective function
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
-    res = solver.solve(m, tee=True)
+
+    # Solve with costing
+    res = solver.solve(m, tee=False)
+    if check_optimal_termination(res):
+        print("Costing setup successful")
+    else:
+        print("SOLVE FAILED")
+        infeas.print_infeasible_constraints(m)
+
+    return m
+
+
+def run_recovery_analysis(m, recovery_range=(0.5,)):
+    """Run analysis for different recovery values"""
+    solver = get_solver()
+    solve_status = np.zeros(len(recovery_range))
+    data = []
+
+    for ind, recovery in enumerate(recovery_range):
+        m.fs.water_recovery.fix(recovery)
+        print(f"FIXED RECOVERY TO {recovery}")
+
+        res = solver.solve(m, tee=True)
+        if check_optimal_termination(res):
+            for stage in m.fs.NonFinalStages:
+                m.fs.OAROUnits[stage].area.display()
+            m.fs.RO.area.display()
+
+            data.append(export_variables_to_dict(recovery, m.fs.costing))
+            solve_status[ind] = 1
+        else:
+            print("SOLVE FAILED")
+            infeas.print_infeasible_constraints(m)
+
+    dump_to_json(data=data, filename='oaro_analysis.json')
+
+    print(f"solve status:\n{solve_status}")
+    return m, solve_status
+
+
+def report_results(m):
+    """Report final results"""
+    solver = get_solver()
+    res = solver.solve(m, tee=False)
     assert_optimal_termination(res)
+
     m.fs.costing.QGESS_LCOW.display()
-    # for v in m.component_objects(Var, descend_into=True):
-    #     print("FOUND VAR:" + v.name)
-    #     v.pprint()
-    # m = main()
-    # feed_mass_frac_NaCl = 0.03
-    # feed_mass_frac_H2O = 1 - feed_mass_frac_NaCl
+    print(f"Electricity cost: {value(m.fs.costing.aggregate_flow_costs['electricity'])}")
 
-    # # Removing upper bounds on OARO module dimensions, but more importantly, unfixing OARO module area!
-    # m.fs.OARO.area.unfix()
-    # m.fs.OARO.area.setub(None)
-    # m.fs.OARO.length.setub(None)
-    # m.fs.OARO.width.setub(None)
+    # Additional reporting could be added here
 
-    # # Unfix OARO feed velocity
-    # m.fs.OARO.feed_side.velocity[0,0].unfix()
+    return m
 
-    # # Removing upper bounds on RO module dimensions, but more importantly, unfixing RO module width!
-    # m.fs.RO.width.unfix()
-    # m.fs.RO.area.setub(None)
-    # m.fs.RO.width.setub(None)
-    # m.fs.RO.length.setub(None)
 
-    # feed_flow_mass = 1 # kg/s
-    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "NaCl"].fix(
-    #     feed_flow_mass * feed_mass_frac_NaCl
-    # )
-    # feed_mass_frac_H2O = 1 - feed_mass_frac_NaCl
-    # m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
-    #     feed_flow_mass * feed_mass_frac_H2O
-    # )
-    # res = oaro.solve(m, tee=True)
-
-    # # NF Permeate conditions
-    # m.fs.feed.flow_mass_phase_comp[0,"Liq","H2O"].fix(7.2258)
-    # m.fs.feed.flow_mass_phase_comp[0,"Liq","NaCl"].fix(0.64491)
-    # res = oaro.solve(m, tee=False)
-    # assert_optimal_termination(res)
-    # Let's loop through mass flowrates, from 2 to 5 kg/s. 5 kg/s can solve now.
-    # for i in range(2,6):
-    #     feed_flow_mass = i # kg/s
-    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "NaCl"].fix(
-    #         feed_flow_mass * feed_mass_frac_NaCl
-    #     )
-    #     feed_mass_frac_H2O = 1 - feed_mass_frac_NaCl
-    #     m.fs.feed.properties[0].flow_mass_phase_comp["Liq", "H2O"].fix(
-    #         feed_flow_mass * feed_mass_frac_H2O
-    #     )
-    #     res = oaro.solve(m, tee=True)
-    #     print(f"FLOWRATE = {i}")
-
-    #     if check_optimal_termination(res):
-    #         oaro.display_system(m)
-
-    #         m.fs.OARO.area.display()
-    #         m.fs.RO.area.display()
-
-    #     else:
-    #         print("SOLVE FAILED")
-    #         infeas.print_infeasible_constraints(m)
+if __name__ == "__main__":
+    # Main execution flow
+    m, num_stages = main()
+    m, watertap_blocks = setup_optimization(m, num_stages)
+    m = setup_costing(m, watertap_blocks)
+    m, solve_status = run_recovery_analysis(m, np.arange(0.2, 0.5, 0.02).tolist())
+    m = report_results(m)
