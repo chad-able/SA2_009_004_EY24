@@ -23,7 +23,7 @@ from watertap.costing import WaterTAPCosting
 
 # Get the directory of the current script for relative paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../'))  # Two directories up
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../'))  # One directory up
 
 # Add project root to path for local imports
 import sys
@@ -139,6 +139,20 @@ def setup_costing(m, watertap_blocks):
     """Set up the costing model"""
     solver = get_solver()
 
+    # Create WaterTAP costing block
+    m.fs.costing = WaterTAPCosting()
+
+    # Configure costing for each unit
+    for unit in watertap_blocks:
+        unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
+
+    # Process costing
+    m.fs.costing.cost_process()
+    m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.base_currency = pyunits.USD_2018
+
     # Create QGESS costing
     m = QGESS_costing(
         m=m,
@@ -185,7 +199,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
-    dump_to_json(data=data, filename='oaro_analysis.json')
+    dump_to_json(data=data, filename='oaro_without_nf.json')
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -210,5 +224,5 @@ if __name__ == "__main__":
     m, num_stages = main()
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_costing(m, watertap_blocks)
-    m, solve_status = run_recovery_analysis(m, np.arange(0.2, 0.5, 0.02).tolist())
+    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.4, 0.01).tolist())
     m = report_results(m)
