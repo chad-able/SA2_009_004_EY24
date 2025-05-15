@@ -32,7 +32,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../'))  # One director
 # Add project root to path for local imports
 import sys
 sys.path.append(PROJECT_ROOT)
-from prommis_costing import QGESS_costing
+from prommis_costing import QGESS_costing, get_lcow_breakdown
+
 from MD_Train.helpers import export_variables_to_dict, dump_to_json
 
 # Constants
@@ -51,10 +52,9 @@ def load_solute_data():
         return json.load(f)
 
 
-def main(vis=False, recovery=0.5):
+def main(vis=False, recovery=0.5, num_stages=5):
     """Build and initialize the OARO model"""
     solver = get_solver()
-    num_stages = 5
 
     # Build model
     m = oaro.main(
@@ -248,18 +248,21 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             m.fs.RO.area.display()
             m.fs.nf.area.display()
 
-            data.append(export_variables_to_dict(
+            data_dump = export_variables_to_dict(
                 recovery,
                 m.fs.costing,
                 nf_recovery_fraction=NF_RECOVERY
-            ))
+            )
+
+            data_dump['number of stages'] = m.fs.NumberOfStages.value
+            data.append(data_dump)
 
             solve_status[ind] = 1
         else:
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
-    dump_to_json(data=data, filename='oaro_with_nf.json')
+    dump_to_json(data=data, filename='oaro_with_nf_5_stage.json')
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -275,14 +278,18 @@ def report_results(m):
     m.fs.costing.QGESS_LCOW.display()
     print(f"Electricity cost: {value(m.fs.costing.aggregate_flow_costs['electricity'])}")
 
-    return m
 
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main()
+    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_nf_for_costing(m)
     m = setup_costing(m, watertap_blocks)
-    m, solve_status = run_recovery_analysis(m, (np.arange(0.2, 0.5, 0.02)).tolist())
+    breakdown = get_lcow_breakdown(m)
+    breakdown['number of stages'] = m.fs.NumberOfStages.value
+    breakdown['recovery']= m.fs.water_recovery.value
+    dump_to_json(data=[breakdown], filename='oaro_with_nf_5_stage_lcow_breakdown.json')
+
+#    m, solve_status = run_recovery_analysis(m, (np.arange(0.1, 0.54, 0.02)).tolist())
     m = report_results(m)

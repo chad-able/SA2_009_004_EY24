@@ -102,6 +102,71 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
 
     return m
 
+def get_lcow_breakdown(m):
+    """
+    Return a dictionary with LCOW breakdown showing contribution of each component
+    
+    Args:
+        m: The Pyomo model with QGESS costing applied
+        
+    Returns:
+        Dictionary with LCOW components and their percentage contribution
+    """
+    # Get total annualized cost and LCOW
+    total_cost = value(m.fs.costing.QGESS_annualized_cost)
+    lcow = value(m.fs.costing.QGESS_LCOW)
+    
+    # Calculate component contributions to LCOW
+    lcow_breakdown = {
+        "total_lcow": lcow,
+        "capital_cost_contribution": {
+            "value": value(m.fs.costing.QGESS_annualized_capital_cost) / total_cost * lcow,
+            "percentage": value(m.fs.costing.QGESS_annualized_capital_cost) / total_cost * 100,
+            "components": {
+                "equipment_cost": value(m.fs.costing.total_BEC) / total_cost * lcow,
+                "ancillary_cost": value(m.fs.costing.ancillary_cost) / total_cost * lcow,
+                "building_cost": value(m.fs.costing.building_cost) / total_cost * lcow,
+                "epcm_cost": value(m.fs.costing.epcm_cost) / total_cost * lcow,
+                "contingency_cost": value(m.fs.costing.contingency_cost) / total_cost * lcow
+            }
+        },
+        "fixed_operating_cost_contribution": {
+            "value": value(m.fs.costing.QGESS_fixed_operating_cost) / total_cost * lcow,
+            "percentage": value(m.fs.costing.QGESS_fixed_operating_cost) / total_cost * 100,
+            "components": {
+                "labor_cost": value(m.fs.costing.QGESS_operating_labor_cost) / total_cost * lcow,
+                "maintenance_cost": value(m.fs.costing.MM_cost) / total_cost * lcow,
+                "qaqc_cost": value(m.fs.costing.QAQC_cost) / total_cost * lcow,
+                "admin_cost": value(m.fs.costing.Admin_labor_cost) / total_cost * lcow,
+                "tax_insurance_cost": value(m.fs.costing.prop_tax_insurance_cost) / total_cost * lcow
+            }
+        },
+        "variable_operating_cost_contribution": {
+            "value": value(m.fs.costing.QGESS_variable_operating_cost) / total_cost * lcow,
+            "percentage": value(m.fs.costing.QGESS_variable_operating_cost) / total_cost * 100,
+            "components": {
+                "electricity_cost": value(m.fs.costing.VOP_resource_cost) / total_cost * lcow,
+                "plant_overhead_cost": value(m.fs.costing.plant_overhead_cost) / total_cost * lcow
+            }
+        }
+    }
+
+    # Add waste costs if they exist
+    try:
+        lcow_breakdown["variable_operating_cost_contribution"]["components"]["liquid_waste_cost"] = \
+            value(m.fs.costing.liquid_waste_resource_cost) / total_cost * lcow
+    except:
+        pass
+
+    try:
+        lcow_breakdown["variable_operating_cost_contribution"]["components"]["solid_waste_cost"] = \
+            value(m.fs.costing.solid_waste_resource_cost) / total_cost * lcow
+    except:
+        pass
+
+    return lcow_breakdown
+
+
 def QGESS_cap_cost(m, **cost_params):
 
     cost_parameters = {

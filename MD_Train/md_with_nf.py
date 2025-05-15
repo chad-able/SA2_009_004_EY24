@@ -34,7 +34,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '..'))  # Two directori
 # Add project root to path for local imports
 import sys
 sys.path.append(PROJECT_ROOT)
-from prommis_costing import QGESS_costing
+from prommis_costing import QGESS_costing, get_lcow_breakdown
 
 # Constants
 MEMBRANE_AREA = 100  # m²
@@ -260,7 +260,11 @@ if __name__ == "__main__":
     m = setup_optimization(m)
     m = setup_nf_for_costing(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
+#    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist()
+    m, solve_status = run_recovery_analysis(m)
+    breakdown = get_lcow_breakdown(m)
+    breakdown['recovery']= m.fs.overall_recovery.value
+    dump_to_json(data=[breakdown], filename='md_with_nf_lcow_breakdown.json')
     report_results(m)
 
 
