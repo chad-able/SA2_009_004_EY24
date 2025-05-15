@@ -246,9 +246,12 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
 
     cost_parameters.update(cost_params)
 
+    op_labor = 0
     for i in range(len(cost_parameters['labor_rate'])):
-        m.fs.costing.QGESS_operating_labor_cost = Expression(expr=(cost_parameters['labor_rate'][i]*cost_parameters['operators_per_shift'][i]*(1+cost_parameters['labor_burden']/100)*cost_parameters['hours_per_shift']*
-                                                                   cost_parameters['shifts_per_day']*cost_parameters['operating_days_per_year']*units.USD_2023/units.year))
+        op_labor += (cost_parameters['labor_rate'][i] * cost_parameters['operators_per_shift'][i] * (1 + cost_parameters['labor_burden'] / 100) * cost_parameters['hours_per_shift'] *
+                     cost_parameters['shifts_per_day'] * cost_parameters['operating_days_per_year'] * units.USD_2023 / units.year)
+
+    m.fs.costing.QGESS_operating_labor_cost = Expression(expr=op_labor)
 
     #maintenance and material costs
     m.fs.costing.MM_cost = Expression(expr=cost_parameters['maintenance_material_percentage']/100*m.fs.costing.TPC_cost/units.year)
