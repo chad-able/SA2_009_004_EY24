@@ -288,7 +288,7 @@ def get_breakdown(m):
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main(num_stages=6, vis=False, recovery=0.5)
+    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_nf_for_costing(m)
     m = setup_costing(m, watertap_blocks)
