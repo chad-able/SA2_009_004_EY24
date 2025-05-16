@@ -208,5 +208,15 @@ if __name__ == "__main__":
     m = main()
     m = setup_optimization(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m,np.arange(0.2,0.6,0.02).tolist())
+    m, solve_status = run_recovery_analysis(m,np.arange(0.1,0.6,0.02).tolist())
+
+    m.fs.visualize("MD")  # this returns immediately
+
+    try:
+        print("Type ^C to stop the program")
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Program stopped")
+
     report_results(m)

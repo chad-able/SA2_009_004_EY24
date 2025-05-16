@@ -41,7 +41,7 @@ MEMBRANE_AREA = 100  # m²
 FEED_FLOW_MASS = 1  # kg/s
 FEED_MASS_FRAC_TDS = 0.035
 CONC_MASS_COMP_TDS = 86.65 #g/L
-NF_RECOVERY = 0.5
+NF_RECOVERY = 0.85
 
 
 def load_solute_data():
@@ -243,7 +243,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             infeas.print_infeasible_constraints(m)
 
     dump_to_json(data=data,
-                 filename='md_with_nf.json')
+                 filename=f'md_with_nf_{NF_RECOVERY}_recovery.json')
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -254,17 +254,22 @@ def report_results(m):
     m.fs.nf.area.display()
     m.fs.costing.QGESS_LCOW.display()
 
+def get_breakdown(m):
+    m, solve_status = run_recovery_analysis(m)
+    breakdown = get_lcow_breakdown(m)
+    breakdown['recovery']= m.fs.overall_recovery.value
+    dump_to_json(data=[breakdown], filename='md_with_nf_lcow_breakdown.json')
+    return m, breakdown
+
 if __name__ == "__main__":
     # Main execution flow
     m = main()
     m = setup_optimization(m)
     m = setup_nf_for_costing(m)
     m = setup_costing(m)
-#    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist()
-    m, solve_status = run_recovery_analysis(m)
-    breakdown = get_lcow_breakdown(m)
-    breakdown['recovery']= m.fs.overall_recovery.value
-    dump_to_json(data=[breakdown], filename='md_with_nf_lcow_breakdown.json')
+    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
+#    m, breakdown = get_breakdown(m)
+
     report_results(m)
 
 

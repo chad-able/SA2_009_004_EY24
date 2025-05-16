@@ -262,7 +262,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
-    dump_to_json(data=data, filename='oaro_with_nf_5_stage.json')
+    dump_to_json(data=data, filename=f'oaro_with_nf_{m.fs.NumberOfStages.value}_stage.json')
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -279,17 +279,19 @@ def report_results(m):
     print(f"Electricity cost: {value(m.fs.costing.aggregate_flow_costs['electricity'])}")
 
 
+def get_breakdown(m):
+    m, solve_status = run_recovery_analysis(m)
+    breakdown = get_lcow_breakdown(m)
+    breakdown['recovery']= m.fs.overall_recovery.value
+    dump_to_json(data=[breakdown], filename='oaro_with_nf_lcow_breakdown.json')
+    return m, breakdown
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
+    m, num_stages = main(num_stages=6, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_nf_for_costing(m)
     m = setup_costing(m, watertap_blocks)
-    breakdown = get_lcow_breakdown(m)
-    breakdown['number of stages'] = m.fs.NumberOfStages.value
-    breakdown['recovery']= m.fs.water_recovery.value
-    dump_to_json(data=[breakdown], filename='oaro_with_nf_5_stage_lcow_breakdown.json')
-
-#    m, solve_status = run_recovery_analysis(m, (np.arange(0.1, 0.54, 0.02)).tolist())
+    # m, breakdown = get_breakdown(m)
+    m, solve_status = run_recovery_analysis(m, (np.arange(0.1, 0.54, 0.02)).tolist())
     m = report_results(m)
