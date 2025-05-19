@@ -206,7 +206,10 @@ def setup_costing(m, watertap_blocks):
     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
     m.fs.costing.base_currency = pyunits.USD_2018
-
+    cost_params = {
+        'has_liquid_waste': True
+    }
+    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY)
     # Create QGESS costing
     m = QGESS_costing(
         m=m,
@@ -214,7 +217,9 @@ def setup_costing(m, watertap_blocks):
         water_flow_rate=pyunits.convert(
             m.fs.product.properties[0].flow_vol,
             to_units=pyunits.m**3 / pyunits.hr
-        )
+        ),
+        liq_waste=liquid_waste,
+        **cost_params
     )
 
     # Set objective function

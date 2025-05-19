@@ -86,8 +86,7 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
     #     if key in cost_parameters:
     #         cost_parameters[key] = value
     cost_parameters.update(cost_params)
-    print("Liquid waste flag is ", cost_parameters['has_liquid_waste'])
-
+    m.fs.costing.total_investment_factor.fix(1)
     total_equip_cost = 0
     for unit in units:
         total_equip_cost = total_equip_cost + unit.costing.capital_cost

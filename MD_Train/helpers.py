@@ -13,21 +13,24 @@ def export_variables_to_dict(recovery, model, nf_recovery_fraction=1.0):
     var_dict['recovery'] = round(recovery, 3) * nf_recovery_fraction
 
     # Iterate through all variable components
-    for v in model.component_objects(Var, active=True):
-        if not v.name.startswith('fs.costing'):
-            raise TypeError('Expecting a costing block')
-
-        name = v.name.replace('fs.costing.','')
-        # Check if it's an indexed variable
-        if v.is_indexed():
-            # Convert index to string if it's a tuple or other non-string type
-            var_dict[name+'_electricity'] = v['electricity'].value
-        else:
-            # It's a scalar variable
-            var_dict[name] = v.value
+    # for v in model.component_objects(Var, active=True):
+    #     if not v.name.startswith('fs.costing'):
+    #         raise TypeError('Expecting a costing block')
+    #
+    #     name = v.name.replace('fs.costing.','')
+    #     # Check if it's an indexed variable
+    #     if v.is_indexed():
+    #         # Convert index to string if it's a tuple or other non-string type
+    #         var_dict[name+'_electricity'] = v['electricity'].value
+    #     else:
+    #         # It's a scalar variable
+    #         var_dict[name] = v.value
 
     # Include the QGESS lcow
     var_dict['lcow'] = round(value(model.QGESS_LCOW), 2)
+    var_dict['annualized capital cost'] = round(value(model.QGESS_annualized_capital_cost), 3)
+    var_dict['variable operating cost'] = round(value(model.QGESS_variable_operating_cost), 3)
+    var_dict['fixed operating cost'] = round(value(model.QGESS_fixed_operating_cost), 3)
 
     return var_dict  # Also return the dictionary in case it's needed
 

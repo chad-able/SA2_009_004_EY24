@@ -151,6 +151,7 @@ def plot_against_recovery(dfs: list, figsize=(900, 900), df_names=None, markers=
     return fig
 
 if __name__ == '__main__':
-    df = load_df('oaro_with_nf_5_stage.json').drop('aggregate_fixed_operating_cost', axis=1)
+    # df = load_df('oaro_with_nf_5_stage.json').drop('aggregate_fixed_operating_cost', axis=1)
+    df = load_df('oaro_with_nf_5_stage.json')
     fig = plot_against_recovery(df)
     fig.show()
