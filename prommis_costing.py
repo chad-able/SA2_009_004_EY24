@@ -88,13 +88,16 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
     cost_parameters.update(cost_params)
     m.fs.costing.total_investment_factor.fix(1)
     total_equip_cost = 0
+    watertap_operating_cost = 0
     for unit in units:
         total_equip_cost = total_equip_cost + unit.costing.capital_cost
+        if hasattr(unit.costing, 'fixed_operating_cost') and unit.costing.fixed_operating_cost is not None:
+            watertap_operating_cost += unit.costing.fixed_operating_cost
 
     m.fs.costing.total_equip_cost = total_equip_cost
     m.fs.costing.electricity_cost.fix(cost_parameters['electricity_cost'])
     m = QGESS_cap_cost(m, **cost_parameters)
-    m = QGESS_op_cost(m, liq_waste, sol_waste, **cost_parameters)
+    m = QGESS_op_cost(m, watertap_op=watertap_operating_cost, liq_waste=liq_waste, sol_waste=sol_waste, **cost_parameters)
 
     m.fs.costing.QGESS_annualized_cost = Expression(expr=(m.fs.costing.QGESS_annualized_capital_cost+m.fs.costing.QGESS_fixed_operating_cost+m.fs.costing.QGESS_variable_operating_cost))
 
@@ -236,7 +239,7 @@ def QGESS_cap_cost(m, **cost_params):
 
     return m
 
-def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
+def QGESS_op_cost(m, watertap_op = 0, liq_waste = 0, sol_waste = 0, **cost_params):
 
     cost_parameters = {
         # operating cost parameters
@@ -302,11 +305,11 @@ def QGESS_op_cost(m, liq_waste, sol_waste, **cost_params):
     m.fs.costing.prop_tax_insurance_cost = Expression(expr=cost_parameters['property_tax_and_insurance_percentage']/100*m.fs.costing.TPC_cost/units.year)
 
     #WaterTAP costs are included here for fixed operating costs
-    #For this flowsheet, only membrane replacement is needed
-
+    #For OARO only membrane replacement is needed
+    m.fs.costing.WaterTAP_fixed_operating_cost = Expression(expr=watertap_op)
 
     #Summing relevant costs
-    m.fs.costing.QGESS_fixed_operating_cost = Expression(expr=(m.fs.costing.QGESS_operating_labor_cost+m.fs.costing.MM_cost+m.fs.costing.QAQC_cost+m.fs.costing.Admin_labor_cost+m.fs.costing.prop_tax_insurance_cost))
+    m.fs.costing.QGESS_fixed_operating_cost = Expression(expr=(m.fs.costing.QGESS_operating_labor_cost+m.fs.costing.MM_cost+m.fs.costing.QAQC_cost+m.fs.costing.Admin_labor_cost+m.fs.costing.prop_tax_insurance_cost+m.fs.costing.WaterTAP_fixed_operating_cost))
 
     #Variable operating costs
     #land costs are set to 0
