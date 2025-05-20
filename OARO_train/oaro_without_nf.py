@@ -122,7 +122,10 @@ def setup_optimization(m, num_stages):
     m.fs.feed.flow_mass_phase_comp[0, "Liq", "NaCl"].unfix()
     m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(FEED_FLOW_VOL)  # m3/s, equal to 235.8 gpm
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(FEED_CONC_MASS_NACL)  # g/L
-
+  
+    # Set 2000ppm TDS limit for product water
+    m.fs.product.properties[0].mass_frac_phase_comp["Liq", "NaCl"].setub(2000e-6)    # Solve with updated feed conditions
+ 
     # Solve with updated feed conditions
     res = solver.solve(m, tee=False)
     if check_optimal_termination(res):

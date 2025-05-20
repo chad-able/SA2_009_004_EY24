@@ -136,7 +136,8 @@ def setup_optimization(m, num_stages):
     m.fs.feed.properties[0].flow_vol_phase["Liq"].fix(FEED_FLOW_VOL * NF_RECOVERY)  # m3/s, considering NF recovery
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "NaCl"].fix(FEED_CONC_MASS_NACL)  # g/L post NF
 
-    # Solve with updated feed conditions
+    # Set 2000ppm TDS limit for product water
+    m.fs.product.properties[0].mass_frac_phase_comp["Liq", "NaCl"].setub(2000e-6)    # Solve with updated feed conditions
     res = solver.solve(m, tee=False)
     if check_optimal_termination(res):
         print("Optimization setup successful")
@@ -299,4 +300,4 @@ if __name__ == "__main__":
     m = setup_costing(m, watertap_blocks)
     # m, breakdown = get_breakdown(m)
     m, solve_status = run_recovery_analysis(m, (np.arange(0.1, 0.54, 0.02)).tolist())
-    m = report_results(m)
+    report_results(m)
