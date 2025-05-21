@@ -198,7 +198,7 @@ def QGESS_cap_cost(m, **cost_params):
 
         # Calculate BEC
 
-    m.fs.costing.total_BEC = Expression(expr=units.convert(m.fs.costing.total_equip_cost * cost_parameters['BEC_factor'], to_units=units.USD_2018))
+    m.fs.costing.total_BEC = Expression(expr=units.convert(m.fs.costing.total_equip_cost * cost_parameters['BEC_factor'], to_units=units.USD_2023))
 
     # Calculate ancillary costs
     m.fs.costing.piping_MandL = Expression(expr=m.fs.costing.total_BEC * cost_parameters['piping_materials_and_labor_percentage']/100)
