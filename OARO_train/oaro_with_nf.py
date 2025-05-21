@@ -52,7 +52,7 @@ def load_solute_data():
         return json.load(f)
 
 
-def main(vis=False, recovery=0.5, num_stages=5):
+def main(vis=False, recovery=0.5, num_stages=2):
     """Build and initialize the OARO model"""
     solver = get_solver()
 
@@ -201,6 +201,7 @@ def setup_costing(m, watertap_blocks):
     for unit in watertap_blocks:
         unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
+    m.fs.costing.osmotically_assisted_reverse_osmosis.membrane_cost.fix(50)
     # Process costing
     m.fs.costing.cost_process()
     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
@@ -256,7 +257,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
             data_dump = export_variables_to_dict(
                 recovery,
-                m.fs.costing,
+                m,
                 nf_recovery_fraction=NF_RECOVERY
             )
 

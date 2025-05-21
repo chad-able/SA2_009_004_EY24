@@ -104,6 +104,9 @@ def QGESS_costing(m, units, liq_waste=0, sol_waste=0, water_flow_rate=0, **cost_
     m.fs.costing.QGESS_LCOW = Expression(expr=(m.fs.costing.QGESS_annualized_cost/
                                              (water_flow_rate*24*cost_parameters['operating_days_per_year'])))
 
+    m.fs.costing.QGESS_reduced_LCOW = Expression(expr=((m.fs.costing.QGESS_annualized_capital_cost+m.fs.costing.QGESS_fixed_operating_cost+m.fs.costing.reduced_variable_operating_cost)/
+                                                       (water_flow_rate*24*cost_parameters['operating_days_per_year'])))
+
     return m
 
 def get_lcow_breakdown(m):
@@ -310,13 +313,14 @@ def QGESS_op_cost(m, watertap_op = 0, liq_waste = 0, sol_waste = 0, **cost_param
 
     #Summing relevant costs
     m.fs.costing.QGESS_fixed_operating_cost = Expression(expr=(m.fs.costing.QGESS_operating_labor_cost+m.fs.costing.MM_cost+m.fs.costing.QAQC_cost+m.fs.costing.Admin_labor_cost+m.fs.costing.prop_tax_insurance_cost+m.fs.costing.WaterTAP_fixed_operating_cost))
-
+    m.fs.costing.reduced_fixed_operating_cost = Expression(expr=(m.fs.costing.MM_cost+m.fs.costing.prop_tax_insurance_cost+m.fs.costing.WaterTAP_fixed_operating_cost))
     #Variable operating costs
     #land costs are set to 0
 
     #Per resource (waste disposal, antiscalant, electricity)
     #Note that solid masses are taken from OLI (not calculated in WaterTAP)
     vop_cost = units.convert(m.fs.costing.aggregate_flow_costs["electricity"], to_units=units.USD_2023/units.year) * cost_parameters['operating_days_per_year'] / 365
+    m.fs.costing.annual_electricity_cost = Expression(expr=units.convert(m.fs.costing.aggregate_flow_costs["electricity"], to_units=units.USD_2023/units.year) * cost_parameters['operating_days_per_year'] / 365)
     # m.fs.costing.VOP_resource_cost = 0
 
     if cost_parameters['has_liquid_waste']:
@@ -331,7 +335,9 @@ def QGESS_op_cost(m, watertap_op = 0, liq_waste = 0, sol_waste = 0, **cost_param
 
     m.fs.costing.VOP_resource_cost = Expression(expr=vop_cost)
     m.fs.costing.plant_overhead_cost = Expression(expr=(0.2*(m.fs.costing.QGESS_fixed_operating_cost+m.fs.costing.VOP_resource_cost)))
+    m.fs.costing.reduced_plant_overhead = Expression(expr=(0.2*(m.fs.costing.QGESS_fixed_operating_cost+m.fs.costing.annual_electricity_cost)))
 
     m.fs.costing.QGESS_variable_operating_cost = Expression(expr=(m.fs.costing.VOP_resource_cost+m.fs.costing.plant_overhead_cost))
+    m.fs.costing.reduced_variable_operating_cost = Expression(expr=(m.fs.costing.annual_electricity_cost+m.fs.costing.reduced_plant_overhead))
 
     return m

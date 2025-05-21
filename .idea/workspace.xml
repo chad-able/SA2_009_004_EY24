@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="254ec94c-e03f-433e-b80c-c201870c8be6" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MD_Train/helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/MD_Train/helpers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/OARO_train/oaro_with_nf.py" beforeDir="false" afterPath="$PROJECT_DIR$/OARO_train/oaro_with_nf.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/prommis_costing.py" beforeDir="false" afterPath="$PROJECT_DIR$/prommis_costing.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
