@@ -244,13 +244,12 @@ def plot_sec_at_recovery(dfs, target_recovery, df_names=None, figsize=(800, 500)
     # Customize layout
     fig.update_layout(
         title=f"{title_text} (Recovery = {target_recovery:.2f})",
-        xaxis_title="Configuration",
         yaxis_title="SEC (kWh/m³)",
         height=figsize[1],
         width=figsize[0],
         yaxis=dict(
             range=[0, max(sec_values) * 1.2],  # Add some space above the bars
-        )
+        ),
     )
     
     return fig
@@ -281,7 +280,7 @@ def plot_sec_barplot(dfs, target_recovery, df_names=None, figsize=(800, 500),
         
     # Default dataframe names if not provided
     if df_names is None:
-        df_names = [f"{i+2} stage unit" for i in range(len(dfs))]
+        df_names = [f"{i+2} Stages" for i in range(len(dfs))]
     
     # Get SEC values at target recovery
     sec_values = []
@@ -326,7 +325,6 @@ def plot_sec_barplot(dfs, target_recovery, df_names=None, figsize=(800, 500),
     
     # Customize layout
     fig.update_layout(
-        xaxis_title="Configuration",
         yaxis_title="SEC (kWh/m³)",
         height=figsize[1],
         width=figsize[0],
@@ -455,15 +453,18 @@ def plot_stage_area_barplot(filenames, target_recovery=0.15, figsize=(900, 600),
                 text=[f"{area:.1f} m²"],
                 textposition='auto',
                 legendgroup=f'Stage {stage_key}',
-                showlegend=(i == 0)  # Only show in legend for first config
+                showlegend=(i == 2),  # Only show in legend for first config
+                width=0.3  # Increase bar width
             ), row=1, col=2)
     
-    fig.update_xaxes(title_text="Configuration", row=1, col=2)
+    fig.update_xaxes(row=1, col=2)
     fig.update_yaxes(title_text="Membrane Area (m²)", row=1, col=2)
     fig.update_layout(
         height=figsize[1],
         width=figsize[0],
         barmode='group',
+        bargap=0.2,        # Reduce gap between bar groups significantly
+        bargroupgap=0.2,    # Reduce gap within groups to minimum
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -475,20 +476,27 @@ def plot_stage_area_barplot(filenames, target_recovery=0.15, figsize=(900, 600),
 
     return fig
 
+def sec_stage_area_sublots(dfs):
+    fig = make_subplots(rows=1, cols=2,)
 
+    fig = plot_sec_barplot(dfs, 0.5, fig=fig)
+
+    fig.data[0].showlegend = False
+
+    names = ['oaro_with_nf_3_stage.json', 'oaro_with_nf_4_stage.json', 'oaro_with_nf_5_stage.json']
+    fig = plot_stage_area_barplot(names, fig=fig)
+
+    fig.write_image('oaro_with_nf_barplots.png')
 
 if __name__ == '__main__':
 
     names = [f'oaro_with_nf_{nstage}_stage.json' for nstage in [3, 4, 5]]
     dfs = [load_df(name, exclude_keys=['Stage Area']) for name in names]
+    sec_stage_area_sublots(dfs)
     fig = plot_against_recovery(dfs,
                                 df_names=[f'{i} stages' for i in [3, 4, 5]],)
 
-    fig = make_subplots(rows=1, cols=2,)
+    fig.write_image('oaro_with_nf_stage_recovery.png')
 
-    fig = plot_sec_barplot(dfs, 0.5, fig=fig)
 
-    names = ['oaro_with_nf_3_stage.json', 'oaro_with_nf_4_stage.json', 'oaro_with_nf_5_stage.json']
-    fig = plot_stage_area_barplot(names, fig=fig)
-    fig.show()
 
