@@ -38,7 +38,7 @@ import json
 
 # Constants
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
-FEED_CONC_MASS_NACL = 99.304  # g/L
+FEED_CONC_MASS_NACL = 86.65  # g/L
 NF_RECOVERY = 0.5  # m3/m3
 
 # class ERDtype(StrEnum):
@@ -274,7 +274,7 @@ def report_results(m):
 
 if __name__ == "__main__":
     # Main execution flow
-     m, num_stages = main(num_stages=4, vis=False, recovery=0.1)
+     m, num_stages = main(num_stages=5, vis=False, recovery=0.1)
      m, watertap_blocks = setup_optimization(m, num_stages)
      m = setup_nf_for_costing(m)
      m = setup_costing(m, watertap_blocks)
