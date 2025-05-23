@@ -171,7 +171,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
             data_dump = export_variables_to_dict(
                 recovery,
-                m.fs.costing,
+                m,
             )
 
             data_dump['number of stages'] = m.fs.NumberOfStages.value
