@@ -41,7 +41,7 @@ MEMBRANE_AREA = 100  # m²
 FEED_FLOW_MASS = 1  # kg/s
 FEED_MASS_FRAC_TDS = 0.035
 CONC_MASS_COMP_TDS = 86.65 #g/L
-NF_RECOVERY = 0.85
+NF_RECOVERY = 0.5
 
 
 def load_solute_data():
@@ -111,7 +111,7 @@ def setup_optimization(m):
     # g/L post NF at 50%
 
    # Set 2000ppm TDS limit for product water
-    m.fs.permeate.properties[0].mass_frac_phase_comp["Liq", "NaCl"].setub(2000e-6)    # Solve with updated feed conditions
+    m.fs.permeate.properties[0].mass_frac_phase_comp["Liq", "TDS"].setub(2000e-6)    # Solve with updated feed conditions
  
     # Solve with new feed conditions
     res = MD.solve(m, tee=False)
@@ -241,7 +241,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             m.fs.MD.area.display()
 
             data.append(export_variables_to_dict(recovery,
-                                                 m.fs.costing,
+                                                 m,
                                                  nf_recovery_fraction=NF_RECOVERY,
                                                  ))
 

@@ -27,12 +27,18 @@ def export_variables_to_dict(recovery, model, nf_recovery_fraction=1.0):
     #         var_dict[name] = v.value
 
     # Include the QGESS lcow
-    var_dict['lcow'] = round(value(model.fs.costing.QGESS_LCOW), 2)
-    var_dict['annualized capital cost'] = round(value(model.fs.costing.QGESS_annualized_capital_cost), 3)
-    var_dict['variable operating cost'] = round(value(model.fs.costing.QGESS_variable_operating_cost), 3)
-    var_dict['fixed operating cost'] = round(value(model.fs.costing.QGESS_fixed_operating_cost), 3)
-    var_dict['liquid waste cost'] = round(value(model.fs.costing.liquid_waste_resource_cost), 3)
-    var_dict['disposal_nacl_conc'] = round(value(model.fs.disposal.properties[0].conc_mass_phase_comp["Liq", "NaCl"]), 3)
+    var_dict['LCOW ($/m³)'] = round(value(model.fs.costing.QGESS_LCOW), 2)
+    var_dict['Annualized Capital Cost ($)'] = round(value(model.fs.costing.QGESS_annualized_capital_cost), 3)
+    var_dict['Variable Operating Cost ($)'] = round(value(model.fs.costing.QGESS_variable_operating_cost), 3)
+    var_dict['Fixed Operating Cost ($)'] = round(value(model.fs.costing.QGESS_fixed_operating_cost), 3)
+    var_dict['Liquid Waste Cost ($)'] = round(value(model.fs.costing.liquid_waste_resource_cost), 3)
+#    var_dict['Disposal TDS Concentration (mg/L)'] = \
+#        round(value(model.fs.disposal.properties[0].conc_mass_phase_comp["Liq", "NaCl"]), 3) * 100
+    var_dict['SEC (kWh/m³)'] = \
+        round(value(model.fs.costing.specific_energy_consumption))
+
+
+
 
     return var_dict  # Also return the dictionary in case it's needed
 

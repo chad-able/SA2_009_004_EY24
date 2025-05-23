@@ -261,7 +261,15 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
                 nf_recovery_fraction=NF_RECOVERY
             )
 
-            data_dump['number of stages'] = m.fs.NumberOfStages.value
+            data_dump['Number of Stages'] = m.fs.NumberOfStages.value
+
+            stage_data = {
+                str(stage): value(m.fs.OAROUnits[stage].area)
+                for stage in m.fs.NonFinalStages
+            }
+
+            data_dump['Stage Area'] = stage_data
+
             data.append(data_dump)
 
             solve_status[ind] = 1
@@ -295,10 +303,11 @@ def get_breakdown(m):
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
+    m, num_stages = main(num_stages=3, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_nf_for_costing(m)
     m = setup_costing(m, watertap_blocks)
     # m, breakdown = get_breakdown(m)
     m, solve_status = run_recovery_analysis(m, (np.arange(0.1, 0.54, 0.02)).tolist())
+    #m, solve_status = run_recovery_analysis(m, [0.3])
     report_results(m)

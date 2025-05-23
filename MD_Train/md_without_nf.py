@@ -99,7 +99,7 @@ def setup_optimization(m):
     m.fs.feed.properties[0].conc_mass_phase_comp["Liq", "TDS"].fix(CONC_MASS_COMP_TDS)  # g/L base 99.304
    
    # Set 2000ppm TDS limit for product water
-    m.fs.permeate.properties[0].mass_frac_phase_comp["Liq", "NaCl"].setub(2000e-6)    # Solve with updated feed conditions
+    m.fs.permeate.properties[0].mass_frac_phase_comp["Liq", "TDS"].setub(2000e-6)    # Solve with updated feed conditions
  
     # Solve with new feed conditions
     res = MD.solve(m, tee=False)
@@ -188,7 +188,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             m.fs.MD.area.display()
 
             data.append(export_variables_to_dict(recovery,
-                                                 m.fs.costing,
+                                                 m,
                                                  ))
 
             solve_status[ind] = 1
