@@ -35,9 +35,10 @@ from MD_Train.helpers import export_variables_to_dict, dump_to_json
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 99.304  # g/L
 
-class ERDtype(StrEnum):
-    pump_as_turbine = "pump_as_turbine"
+# class ERDtype(StrEnum):
+#     pump_as_turbine = "pump_as_turbine"
 
+solver = get_solver()
 
 def main(vis=False, recovery=0.5, num_stages=5):
     """Build and initialize the LSRRO model"""
@@ -59,7 +60,7 @@ def main(vis=False, recovery=0.5, num_stages=5):
         has_calculated_ro_pressure_drop=True,
         permeate_quality_limit=2000e-6,
         AB_gamma_factor=1,
-        B_max=3.5e-6,
+        B_max=None,
         number_of_RO_finite_elements=1,
         set_default_bounds_on_module_dimensions=True,
     )
@@ -89,7 +90,7 @@ def setup_optimization(m, num_stages):
     for stage in m.fs.NonFinalStages:
         # Add units to costing blocks list
 
-        watertap_blocks.append(m.fs.Mixers[stage])
+        # watertap_blocks.append(m.fs.Mixers[stage])
         if stage > 1:
             watertap_blocks.append(m.fs.BoosterPumps[stage])
 
@@ -107,7 +108,7 @@ def setup_optimization(m, num_stages):
 
 def setup_costing(m, watertap_blocks):
     """Set up the costing model"""
-    solver = get_solver()
+#     solver = get_solver()
 
     # Create WaterTAP costing block
     m.fs.costing = WaterTAPCosting()
@@ -116,11 +117,11 @@ def setup_costing(m, watertap_blocks):
     for unit in watertap_blocks:
         unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
-    # Process costing
-    m.fs.costing.cost_process()
-    m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
-    m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
-    m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+#     # Process costing
+#     m.fs.costing.cost_process()
+#     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
+#     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
+#     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
     m.fs.costing.base_currency = pyunits.USD_2023
     cost_params = {
         'has_liquid_waste': True
@@ -136,7 +137,8 @@ def setup_costing(m, watertap_blocks):
         liq_waste=m.fs.disposal.properties[0].flow_vol,
         **cost_params
     )
-
+    if hasattr(m.fs,"objective"):
+        del m.fs.objective
     # Set objective function
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
 
@@ -153,7 +155,7 @@ def setup_costing(m, watertap_blocks):
 
 def run_recovery_analysis(m, recovery_range=(0.5,)):
     """Run analysis for different recovery values"""
-    solver = get_solver()
+    # solver = get_solver()
     solve_status = np.zeros(len(recovery_range))
     data = []
 
@@ -163,8 +165,12 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
         res = solver.solve(m, tee=True)
         if check_optimal_termination(res):
-            for stage in m.fs.NonFinalStages:
+            for stage in m.fs.Stages:
                 m.fs.ROUnits[stage].area.display()
+<<<<<<< variant A
+>>>>>>> variant B
+            # m.fs.RO.area.display()
+======= end
 
             data_dump = export_variables_to_dict(
                 recovery,
@@ -215,15 +221,14 @@ def report_results(m):
 
 if __name__ == "__main__":
     # Main execution flow
-     m, num_stages = main(num_stages=6, vis=False, recovery=0.4)
-     m, watertap_blocks = setup_optimization(m, num_stages)
-     m = setup_costing(m, watertap_blocks)
-     m.fs.costing.QGESS_LCOW.display()
+    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
+    m, watertap_blocks = setup_optimization(m, num_stages)
+    setup_costing(m, watertap_blocks)
 #     breakdown = get_lcow_breakdown(m)
 #     breakdown['number of stages'] = m.fs.NumberOfStages.value
 #     breakdown['recovery']= m.fs.water_recovery.value
 #     dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
 
     
-     m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
-#     m = report_results(m)
+    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
+    report_results(m)
