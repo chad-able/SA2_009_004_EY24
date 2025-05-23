@@ -39,7 +39,7 @@ import json
 # Constants
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 86.65  # g/L
-NF_RECOVERY = 0.5  # m3/m3
+NF_RECOVERY = 0.85  # m3/m3
 
 # class ERDtype(StrEnum):
 #     pump_as_turbine = "pump_as_turbine"
@@ -137,7 +137,7 @@ def setup_costing(m, watertap_blocks):
     cost_params = {
         'has_liquid_waste': True
     }
-    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY)
+    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * (1 - NF_RECOVERY)
     # Create QGESS costing
     m = QGESS_costing(
         m=m,
@@ -279,11 +279,11 @@ if __name__ == "__main__":
      m = setup_nf_for_costing(m)
      m = setup_costing(m, watertap_blocks)
      m.fs.costing.QGESS_LCOW.display()
-#     breakdown = get_lcow_breakdown(m)
-#     breakdown['number of stages'] = m.fs.NumberOfStages.value
-#     breakdown['recovery']= m.fs.water_recovery.value
-#     dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
+     breakdown = get_lcow_breakdown(m)
+     breakdown['number of stages'] = m.fs.NumberOfStages.value
+     breakdown['recovery']= m.fs.water_recovery.value
+     dump_to_json(data=[breakdown], filename='lsrro_with_nf_5_stage_lcow_breakdown.json')
 
     
-     m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
+#     m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
 #     m = report_results(m)

@@ -32,7 +32,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '..'))  # Two directori
 # Add project root to path for local imports
 import sys
 sys.path.append(PROJECT_ROOT)
-from prommis_costing import QGESS_costing
+from prommis_costing import QGESS_costing, get_lcow_breakdown
 
 # Constants
 MEMBRANE_AREA = 100  # m²
@@ -208,6 +208,13 @@ def report_results(m):
     assert_optimal_termination(MD.solve(m))
     m.fs.costing.QGESS_LCOW.display()
     print(f"Electricity cost: {value(m.fs.costing.aggregate_flow_costs['electricity'])}")
+
+def get_breakdown(m):
+    m, solve_status = run_recovery_analysis(m)
+    breakdown = get_lcow_breakdown(m)
+    breakdown['recovery']= m.fs.overall_recovery.value
+    dump_to_json(data=[breakdown], filename='md_with_nf_lcow_breakdown.json')
+    return m, breakdown
 
 
 if __name__ == "__main__":

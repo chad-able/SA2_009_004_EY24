@@ -275,8 +275,8 @@ if __name__ == "__main__":
     m = setup_optimization(m)
     m = setup_nf_for_costing(m)
     m = setup_costing(m)
-    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
-#    m, breakdown = get_breakdown(m)
+#    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
+    m, breakdown = get_breakdown(m)
 
     report_results(m)
 

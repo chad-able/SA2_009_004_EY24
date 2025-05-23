@@ -108,20 +108,20 @@ def setup_optimization(m, num_stages):
 
 def setup_costing(m, watertap_blocks):
     """Set up the costing model"""
-#     solver = get_solver()
-
-    # Create WaterTAP costing block
     m.fs.costing = WaterTAPCosting()
 
     # Configure costing for each unit
     for unit in watertap_blocks:
         unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
-#     # Process costing
-#     m.fs.costing.cost_process()
-#     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
-#     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
-#     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+    # Process costing
+    m.fs.costing.cost_process()
+    m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
+    m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+
+    m.fs.costing.base_currency = pyunits.USD_2023
+
     m.fs.costing.base_currency = pyunits.USD_2023
     cost_params = {
         'has_liquid_waste': True
@@ -220,11 +220,11 @@ if __name__ == "__main__":
     m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     setup_costing(m, watertap_blocks)
-#     breakdown = get_lcow_breakdown(m)
-#     breakdown['number of stages'] = m.fs.NumberOfStages.value
-#     breakdown['recovery']= m.fs.water_recovery.value
-#     dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
+    breakdown = get_lcow_breakdown(m)
+    breakdown['number of stages'] = m.fs.NumberOfStages.value
+    breakdown['recovery']= m.fs.water_recovery.value
+    dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
 
     
-    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
+#    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
     report_results(m)
