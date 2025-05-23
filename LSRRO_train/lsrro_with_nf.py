@@ -21,6 +21,10 @@ from watertap.core.util.model_diagnostics import infeasible as infeas
 from idaes.core import UnitModelCostingBlock
 from watertap.costing import WaterTAPCosting
 from idaes_ui import fv
+import watertap.property_models.multicomp_aq_sol_prop_pack as props
+from watertap.unit_models.nanofiltration_ZO import NanofiltrationZO
+from watertap.unit_models.pressure_changer import Pump
+
 # Get the directory of the current script for relative paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '../'))  # One directory up
@@ -30,15 +34,17 @@ import sys
 sys.path.append(PROJECT_ROOT)
 from prommis_costing import QGESS_costing, get_lcow_breakdown
 from MD_Train.helpers import export_variables_to_dict, dump_to_json
+import json
 
 # Constants
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 99.304  # g/L
 NF_RECOVERY = 0.5  # m3/m3
 
-class ERDtype(StrEnum):
-    pump_as_turbine = "pump_as_turbine"
+# class ERDtype(StrEnum):
+#     pump_as_turbine = "pump_as_turbine"
 
+solver = get_solver()
 
 def main(vis=False, recovery=0.5, num_stages=5):
     """Build and initialize the LSRRO model"""
@@ -60,7 +66,7 @@ def main(vis=False, recovery=0.5, num_stages=5):
         has_calculated_ro_pressure_drop=True,
         permeate_quality_limit=2000e-6,
         AB_gamma_factor=1,
-        B_max=3.5e-6,
+        B_max=None,
         number_of_RO_finite_elements=1,
         set_default_bounds_on_module_dimensions=True,
     )
@@ -90,7 +96,7 @@ def setup_optimization(m, num_stages):
     for stage in m.fs.NonFinalStages:
         # Add units to costing blocks list
 
-        watertap_blocks.append(m.fs.Mixers[stage])
+        # watertap_blocks.append(m.fs.Mixers[stage])
         if stage > 1:
             watertap_blocks.append(m.fs.BoosterPumps[stage])
 
@@ -108,10 +114,14 @@ def setup_optimization(m, num_stages):
 
 def setup_costing(m, watertap_blocks):
     """Set up the costing model"""
-    solver = get_solver()
-
+#     solver = get_solver()
     # Create WaterTAP costing block
+
     m.fs.costing = WaterTAPCosting()
+
+    # Add NF units to watertap_blocks
+    watertap_blocks.append(m.fs.nf)
+    watertap_blocks.append(m.fs.P1)
 
     # Configure costing for each unit
     for unit in watertap_blocks:
@@ -122,6 +132,7 @@ def setup_costing(m, watertap_blocks):
     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
+
     m.fs.costing.base_currency = pyunits.USD_2023
     cost_params = {
         'has_liquid_waste': True
@@ -138,7 +149,8 @@ def setup_costing(m, watertap_blocks):
         liq_waste=liquid_waste,
         **cost_params
     )
-
+    if hasattr(m.fs,"objective"):
+        del m.fs.objective
     # Set objective function
     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
 
@@ -149,6 +161,49 @@ def setup_costing(m, watertap_blocks):
     else:
         print("SOLVE FAILED")
         infeas.print_infeasible_constraints(m)
+
+    return m
+
+def load_solute_data():
+    """Load solute parameters from JSON file"""
+    json_path = os.path.join(PROJECT_ROOT, 'solute_parameters.json')
+    with open(json_path) as f:
+        return json.load(f)
+
+def setup_nf_for_costing(m):
+    """Set up the NF system for costing"""
+    # Load solute data
+    solute_data = load_solute_data()
+
+    # Prepare solute properties
+    solute_list = list(solute_data.keys())
+    mw_data = {key: solute_data[key]['mw'] for key in solute_list}
+    charge = {key: solute_data[key]['charge'] for key in solute_list}
+    diffusivity = {("Liq", key): 1e-9 for key in solute_list}
+
+    # Set up property package
+    m.fs.properties = props.MCASParameterBlock(
+        solute_list=solute_list,
+        mw_data=mw_data,
+        charge=charge,
+        diffusivity_data=diffusivity,
+        density_calculation=props.DensityCalculation.seawater,
+        material_flow_basis=props.MaterialFlowBasis.mass
+    )
+
+    # Create NF and pump units
+    m.fs.nf = NanofiltrationZO(property_package=m.fs.properties)
+    m.fs.P1 = Pump(property_package=m.fs.properties)
+
+    # Configure pump
+    m.fs.P1.efficiency_pump.fix(0.80)  # pump efficiency [-]
+    m.fs.P1.outlet.pressure[0].fix(10e5)
+
+    # Configure NF
+    m.fs.nf.properties_permeate[0].pressure.fix(101325)
+    m.fs.nf.recovery_vol_phase.fix(0.5)
+    m.fs.nf.flux_vol_solvent.fix(1.446759259259259e-5)
+    m.fs.nf.area.fix(499.44685)
 
     return m
 
@@ -165,7 +220,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
         res = solver.solve(m, tee=True)
         if check_optimal_termination(res):
-            for stage in m.fs.NonFinalStages:
+            for stage in m.fs.Stages:
                 m.fs.ROUnits[stage].area.display()
 
             data_dump = export_variables_to_dict(
@@ -219,8 +274,9 @@ def report_results(m):
 
 if __name__ == "__main__":
     # Main execution flow
-     m, num_stages = main(num_stages=3, vis=False, recovery=0.1)
+     m, num_stages = main(num_stages=4, vis=False, recovery=0.1)
      m, watertap_blocks = setup_optimization(m, num_stages)
+     m = setup_nf_for_costing(m)
      m = setup_costing(m, watertap_blocks)
      m.fs.costing.QGESS_LCOW.display()
 #     breakdown = get_lcow_breakdown(m)

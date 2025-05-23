@@ -167,10 +167,6 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
         if check_optimal_termination(res):
             for stage in m.fs.Stages:
                 m.fs.ROUnits[stage].area.display()
-<<<<<<< variant A
->>>>>>> variant B
-            # m.fs.RO.area.display()
-======= end
 
             data_dump = export_variables_to_dict(
                 recovery,
