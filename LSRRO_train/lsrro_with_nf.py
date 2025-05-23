@@ -34,6 +34,7 @@ from MD_Train.helpers import export_variables_to_dict, dump_to_json
 # Constants
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 99.304  # g/L
+NF_RECOVERY = 0.5  # m3/m3
 
 class ERDtype(StrEnum):
     pump_as_turbine = "pump_as_turbine"
@@ -48,7 +49,7 @@ def main(vis=False, recovery=0.5, num_stages=5):
         number_of_stages=num_stages,
         water_recovery=recovery,
         Cin=FEED_CONC_MASS_NACL,  # inlet NaCl conc kg/m3,
-        Qin=FEED_FLOW_VOL,  # inlet feed flowrate m3/s
+        Qin=FEED_FLOW_VOL*NF_RECOVERY,  # inlet feed flowrate m3/s
         Cbrine=None,  # brine conc kg/m3
         A_case=lsrro.ACase.optimize,
         B_case=lsrro.BCase.optimize,
@@ -125,6 +126,7 @@ def setup_costing(m, watertap_blocks):
     cost_params = {
         'has_liquid_waste': True
     }
+    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY)
     # Create QGESS costing
     m = QGESS_costing(
         m=m,
@@ -133,7 +135,7 @@ def setup_costing(m, watertap_blocks):
             m.fs.product.properties[0].flow_vol,
             to_units=pyunits.m**3 / pyunits.hr
         ),
-        liq_waste=m.fs.disposal.properties[0].flow_vol,
+        liq_waste=liquid_waste,
         **cost_params
     )
 
@@ -167,7 +169,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
                 m.fs.ROUnits[stage].area.display()
 
             data_dump = export_variables_to_dict(
-                recovery,
+                recovery*NF_RECOVERY,
                 m,
             )
 
@@ -181,6 +183,8 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
                 for stage in m.fs.NonFinalStages
             }
 
+            data_dump['disposal'] = value(m.fs.disposal.properties[0].flow_vol)
+            data_dump['feed frac'] = value(m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY))
 
             data_dump['A_comp'] = a_comp
             data_dump['B_comp'] = b_comp
@@ -193,7 +197,7 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
             print("SOLVE FAILED")
             infeas.print_infeasible_constraints(m)
 
-    dump_to_json(data=data, filename='lsrro_without_nf_6_stage.json')
+    dump_to_json(data=data, filename=f'lsrro_with_nf_{m.fs.NumberOfStages.value}_stage_{NF_RECOVERY}_recov.json')
 
     print(f"solve status:\n{solve_status}")
     return m, solve_status
@@ -215,7 +219,7 @@ def report_results(m):
 
 if __name__ == "__main__":
     # Main execution flow
-     m, num_stages = main(num_stages=6, vis=False, recovery=0.4)
+     m, num_stages = main(num_stages=3, vis=False, recovery=0.1)
      m, watertap_blocks = setup_optimization(m, num_stages)
      m = setup_costing(m, watertap_blocks)
      m.fs.costing.QGESS_LCOW.display()

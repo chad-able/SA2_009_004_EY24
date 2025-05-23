@@ -270,6 +270,9 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
             data_dump['Stage Area'] = stage_data
 
+            data_dump['Disposal TDS Concentration (mg/L)'] = \
+                round(value(m.fs.disposal.properties[0].conc_mass_phase_comp["Liq", "NaCl"]), 3) * 100
+
             data.append(data_dump)
 
             solve_status[ind] = 1
