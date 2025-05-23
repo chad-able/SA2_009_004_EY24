@@ -38,6 +38,7 @@ FEED_CONC_MASS_NACL = 99.304  # g/L
 class ERDtype(StrEnum):
     pump_as_turbine = "pump_as_turbine"
 
+solver = get_solver()
 
 def main(vis=False, recovery=0.5, num_stages=5):
     """Build and initialize the LSRRO model"""
@@ -89,7 +90,7 @@ def setup_optimization(m, num_stages):
     for stage in m.fs.NonFinalStages:
         # Add units to costing blocks list
 
-        watertap_blocks.append(m.fs.Mixers[stage])
+        # watertap_blocks.append(m.fs.Mixers[stage])
         if stage > 1:
             watertap_blocks.append(m.fs.BoosterPumps[stage])
 
@@ -105,8 +106,8 @@ def setup_optimization(m, num_stages):
     return m, watertap_blocks
 
 
-# def setup_costing(m, watertap_blocks):
-#     """Set up the costing model"""
+def setup_costing(m, watertap_blocks):
+    """Set up the costing model"""
 #     solver = get_solver()
 
 #     # Create WaterTAP costing block
@@ -121,34 +122,35 @@ def setup_optimization(m, num_stages):
 #     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
 #     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
 #     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
-#     m.fs.costing.base_currency = pyunits.USD_2018
-#     cost_params = {
-#         'has_liquid_waste': True
-#     }
-#     # Create QGESS costing
-#     m = QGESS_costing(
-#         m=m,
-#         units=watertap_blocks,
-#         water_flow_rate=pyunits.convert(
-#             m.fs.product.properties[0].flow_vol,
-#             to_units=pyunits.m**3 / pyunits.hr
-#         ),
-#         liq_waste=m.fs.disposal.properties[0].flow_vol,
-#         **cost_params
-#     )
+    m.fs.costing.base_currency = pyunits.USD_2023
+    cost_params = {
+        'has_liquid_waste': True
+    }
+    # Create QGESS costing
+    m = QGESS_costing(
+        m=m,
+        units=watertap_blocks,
+        water_flow_rate=pyunits.convert(
+            m.fs.product.properties[0].flow_vol,
+            to_units=pyunits.m**3 / pyunits.hr
+        ),
+        liq_waste=m.fs.disposal.properties[0].flow_vol,
+        **cost_params
+    )
+    if hasattr(m.fs,"objective"):
+        del m.fs.objective
+    # Set objective function
+    m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
 
-#     # Set objective function
-#     m.fs.objective = Objective(expr=m.fs.costing.QGESS_LCOW)
+    # Solve with costing
+    res = solver.solve(m, tee=False)
+    if check_optimal_termination(res):
+        print("Costing setup successful")
+    else:
+        print("SOLVE FAILED")
+        infeas.print_infeasible_constraints(m)
 
-#     # Solve with costing
-#     res = solver.solve(m, tee=False)
-#     if check_optimal_termination(res):
-#         print("Costing setup successful")
-#     else:
-#         print("SOLVE FAILED")
-#         infeas.print_infeasible_constraints(m)
-
-#     return m
+    return m
 
 
 def run_recovery_analysis(m, recovery_range=(0.5,)):
@@ -203,13 +205,13 @@ def report_results(m):
 if __name__ == "__main__":
     # Main execution flow
     m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
-#     m, watertap_blocks = setup_optimization(m, num_stages)
-#     m = setup_costing(m, watertap_blocks)
+    m, watertap_blocks = setup_optimization(m, num_stages)
+    setup_costing(m, watertap_blocks)
 #     breakdown = get_lcow_breakdown(m)
 #     breakdown['number of stages'] = m.fs.NumberOfStages.value
 #     breakdown['recovery']= m.fs.water_recovery.value
 #     dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
 
     
-# #    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
-#     m = report_results(m)
+    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
+    report_results(m)
