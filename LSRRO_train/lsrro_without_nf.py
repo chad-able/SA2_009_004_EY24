@@ -60,7 +60,7 @@ def main(vis=False, recovery=0.5, num_stages=5):
         has_calculated_ro_pressure_drop=True,
         permeate_quality_limit=2000e-6,
         AB_gamma_factor=1,
-        B_max=3.5e-6,
+        B_max=None,
         number_of_RO_finite_elements=1,
         set_default_bounds_on_module_dimensions=True,
     )
