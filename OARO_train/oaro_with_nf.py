@@ -211,7 +211,7 @@ def setup_costing(m, watertap_blocks):
     cost_params = {
         'has_liquid_waste': True
     }
-    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY)
+    liquid_waste = m.fs.disposal.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * (1 - NF_RECOVERY)
     # Create QGESS costing
     m = QGESS_costing(
         m=m,

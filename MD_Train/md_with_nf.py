@@ -207,7 +207,7 @@ def setup_costing(m):
     cost_params = {
         'has_liquid_waste': True
     }
-    liquid_waste = m.fs.reject.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * NF_RECOVERY / (1 - NF_RECOVERY)
+    liquid_waste = m.fs.reject.properties[0].flow_vol + m.fs.feed.properties[0].flow_vol * (1 - NF_RECOVERY)
     # Apply QGESS costing
     m = QGESS_costing(
         m=m,
@@ -272,10 +272,10 @@ def get_breakdown(m):
 if __name__ == "__main__":
     # Main execution flow
     m = main()
-    m = setup_optimization(m)
-    m = setup_nf_for_costing(m)
-    m = setup_costing(m)
-#    m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
+    setup_optimization(m)
+    setup_nf_for_costing(m)
+    setup_costing(m)
+    # m, solve_status = run_recovery_analysis(m,(np.arange(0.2,0.6,0.02)*1.3).tolist())
     m, breakdown = get_breakdown(m)
 
     report_results(m)
