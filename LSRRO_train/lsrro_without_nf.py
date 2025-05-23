@@ -35,8 +35,8 @@ from MD_Train.helpers import export_variables_to_dict, dump_to_json
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 99.304  # g/L
 
-class ERDtype(StrEnum):
-    pump_as_turbine = "pump_as_turbine"
+# class ERDtype(StrEnum):
+#     pump_as_turbine = "pump_as_turbine"
 
 solver = get_solver()
 
@@ -155,7 +155,7 @@ def setup_costing(m, watertap_blocks):
 
 def run_recovery_analysis(m, recovery_range=(0.5,)):
     """Run analysis for different recovery values"""
-    solver = get_solver()
+    # solver = get_solver()
     solve_status = np.zeros(len(recovery_range))
     data = []
 
@@ -165,9 +165,9 @@ def run_recovery_analysis(m, recovery_range=(0.5,)):
 
         res = solver.solve(m, tee=True)
         if check_optimal_termination(res):
-            for stage in m.fs.NonFinalStages:
-                m.fs.OAROUnits[stage].area.display()
-            m.fs.RO.area.display()
+            for stage in m.fs.Stages:
+                m.fs.ROUnits[stage].area.display()
+            # m.fs.RO.area.display()
 
             data_dump = export_variables_to_dict(
                 recovery,
