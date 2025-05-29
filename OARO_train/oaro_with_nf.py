@@ -102,6 +102,14 @@ def setup_optimization(m, num_stages):
             watertap_blocks.append(m.fs.RecyclePumps[stage])
 
         watertap_blocks.append(m.fs.EnergyRecoveryDevices[stage])
+    
+    # Change channel_height to match LSRRO spec
+    m.fs.RO.feed_side.channel_height.fix(1e-3)
+    m.fs.RO.feed_side.spacer_porosity.fix(0.85)
+
+    # Solve with initial conditions
+    res = solver.solve(m, tee=True)
+    assert_optimal_termination(res)
 
     # Removing upper bounds on RO module dimensions, unfixing RO module width
     m.fs.RO.width.unfix()
@@ -306,7 +314,7 @@ def get_breakdown(m):
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main(num_stages=3, vis=False, recovery=0.5)
+    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
     m, watertap_blocks = setup_optimization(m, num_stages)
     m = setup_nf_for_costing(m)
     m = setup_costing(m, watertap_blocks)

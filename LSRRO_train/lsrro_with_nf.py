@@ -39,7 +39,7 @@ import json
 # Constants
 FEED_FLOW_VOL = 0.014877  # m³/s, equal to 235.8 gpm
 FEED_CONC_MASS_NACL = 86.65  # g/L
-NF_RECOVERY = 0.85  # m3/m3
+NF_RECOVERY = 0.5  # m3/m3
 
 # class ERDtype(StrEnum):
 #     pump_as_turbine = "pump_as_turbine"

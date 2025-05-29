@@ -90,6 +90,14 @@ def setup_optimization(m, num_stages):
 
         watertap_blocks.append(m.fs.EnergyRecoveryDevices[stage])
 
+    # Change channel_height to match LSRRO spec
+    m.fs.RO.feed_side.channel_height.fix(1e-3)
+    m.fs.RO.feed_side.spacer_porosity.fix(0.85)
+
+    # Solve with initial conditions
+    res = solver.solve(m, tee=True)
+    assert_optimal_termination(res)
+
     # Removing upper bounds on RO module dimensions, unfixing RO module width
     m.fs.RO.width.unfix()
     m.fs.RO.area.setub(None)
