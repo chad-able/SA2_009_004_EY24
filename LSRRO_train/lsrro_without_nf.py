@@ -114,6 +114,8 @@ def setup_costing(m, watertap_blocks):
     for unit in watertap_blocks:
         unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
+    m.fs.costing.reverse_osmosis.high_pressure_membrane_cost.fix(50*pyunits.USD_2023/pyunits.m**2)
+
     # Process costing
     m.fs.costing.cost_process()
     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
@@ -122,7 +124,6 @@ def setup_costing(m, watertap_blocks):
 
     m.fs.costing.base_currency = pyunits.USD_2023
 
-    m.fs.costing.base_currency = pyunits.USD_2023
     cost_params = {
         'has_liquid_waste': True
     }
@@ -217,7 +218,7 @@ def report_results(m):
 
 if __name__ == "__main__":
     # Main execution flow
-    m, num_stages = main(num_stages=5, vis=False, recovery=0.5)
+    m, num_stages = main(num_stages=3, vis=False, recovery=0.25)
     m, watertap_blocks = setup_optimization(m, num_stages)
     setup_costing(m, watertap_blocks)
     breakdown = get_lcow_breakdown(m)
@@ -226,5 +227,5 @@ if __name__ == "__main__":
     dump_to_json(data=[breakdown], filename='lsrro_without_nf_5_stage_lcow_breakdown.json')
 
     
-#    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.02).tolist())
+    m, solve_status = run_recovery_analysis(m, np.arange(0.1, 0.5, 0.1).tolist())
     report_results(m)

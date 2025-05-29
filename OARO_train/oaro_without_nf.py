@@ -156,12 +156,15 @@ def setup_costing(m, watertap_blocks):
     for unit in watertap_blocks:
         unit.costing = UnitModelCostingBlock(flowsheet_costing_block=m.fs.costing)
 
+
+    m.fs.costing.osmotically_assisted_reverse_osmosis.membrane_cost.fix(50*pyunits.USD_2023/pyunits.m**2)
+
     # Process costing
     m.fs.costing.cost_process()
     m.fs.costing.add_annual_water_production(m.fs.product.properties[0].flow_vol)
     m.fs.costing.add_LCOW(m.fs.product.properties[0].flow_vol)
     m.fs.costing.add_specific_energy_consumption(m.fs.product.properties[0].flow_vol)
-    m.fs.costing.base_currency = pyunits.USD_2018
+    m.fs.costing.base_currency = pyunits.USD_2023
     cost_params = {
         'has_liquid_waste': True
     }
